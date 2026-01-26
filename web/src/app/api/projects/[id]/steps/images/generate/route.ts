@@ -21,9 +21,14 @@ export async function POST(
 
     const { id: projectId } = await params;
     const body = await request.json();
-    const { count = 4 } = body;
+    const { count = 4, customPrompt } = body;
 
-    console.log("[images/generate] 开始生成图片", { projectId, count, userId: session.user.id });
+    console.log("[images/generate] 开始生成图片", {
+      projectId,
+      count,
+      hasCustomPrompt: !!customPrompt,
+      userId: session.user.id
+    });
 
     // 验证项目归属
     const project = await prisma.project.findFirst({
@@ -92,7 +97,8 @@ export async function POST(
       imageStep.id,
       baseSortOrder,
       batchId,
-      batchStartTime
+      batchStartTime,
+      customPrompt
     );
 
     // 立即返回，告诉前端正在生成中
@@ -159,7 +165,7 @@ export async function DELETE(
 }
 
 /**
- * 异步生成图片并保存到数据库（逐张生成，实时保存）
+ * 异步生成图片并保存到数据库（并发生成，实时保存）
  */
 async function generateImagesAsync(
   copyContent: string,
@@ -168,9 +174,11 @@ async function generateImagesAsync(
   stepId: string,
   baseSortOrder: number,
   batchId: string,
-  batchStartTime: string
+  batchStartTime: string,
+  customPrompt?: string
 ) {
   let generatedCount = 0;
+  const overallStartTime = Date.now();
 
   try {
     // 检查任务是否已取消
@@ -181,26 +189,34 @@ async function generateImagesAsync(
       return;
     }
 
-    // 生成图片提示词
-    console.log("[images/generate] 开始生成图片提示词...");
-    const result = await generateImagePromptFromCopy(
-      copyContent,
-      undefined,
-      userId,
-      undefined
-    );
-    const imagePrompt = result.prompt;  // 只使用英文提示词
-    console.log("[images/generate] 图片提示词:", imagePrompt?.substring(0, 100));
+    // 生成或使用自定义提示词
+    let imagePrompt: string;
+    if (customPrompt) {
+      imagePrompt = customPrompt;
+      console.log("[images/generate] 使用自定义提示词:", imagePrompt?.substring(0, 100));
+    } else {
+      console.log("[images/generate] 开始生成图片提示词...");
+      const result = await generateImagePromptFromCopy(
+        copyContent,
+        undefined,
+        userId,
+        undefined
+      );
+      imagePrompt = result.prompt;  // 使用英文提示词
+      console.log("[images/generate] 图片提示词:", imagePrompt?.substring(0, 100));
+    }
 
-    // 逐张生成图片并保存
-    for (let i = 0; i < count; i++) {
+    // 并发生成图片
+    console.log(`[images/generate] 开始并发生成 ${count} 张图片...`);
+    const generatePromises = Array.from({ length: count }, async (_, i) => {
       // 检查是否取消
       if (runningTasks.get(batchId)?.cancelled) {
-        console.log(`[images/generate] 任务已取消，已生成 ${generatedCount}/${count} 张:`, batchId);
-        break;
+        console.log(`[images/generate] 任务已取消，跳过第 ${i + 1} 张`);
+        return null;
       }
 
       console.log(`[images/generate] 开始生成第 ${i + 1}/${count} 张图片...`);
+      const imageStartTime = Date.now();
 
       try {
         const image = await generateSingleImage(
@@ -228,16 +244,23 @@ async function generateImagesAsync(
               sortOrder: baseSortOrder + i,
             },
           });
-          generatedCount++;
-          console.log(`[images/generate] 第 ${i + 1}/${count} 张图片已保存`);
+          const imageElapsed = Date.now() - imageStartTime;
+          console.log(`[images/generate] 第 ${i + 1}/${count} 张图片已保存，耗时: ${imageElapsed}ms`);
+          return image;
         }
       } catch (error) {
         console.error(`[images/generate] 第 ${i + 1}/${count} 张生成失败:`, error);
-        // 继续生成下一张
+        return null;
       }
-    }
+      return null;
+    });
 
-    console.log(`[images/generate] 批次完成，共生成 ${generatedCount}/${count} 张图片`);
+    // 等待所有任务完成
+    const results = await Promise.all(generatePromises);
+    generatedCount = results.filter(r => r !== null).length;
+
+    const overallElapsed = Date.now() - overallStartTime;
+    console.log(`[images/generate] 批次完成，共生成 ${generatedCount}/${count} 张图片，总耗时: ${overallElapsed}ms`);
 
     // 更新步骤状态为完成
     await prisma.projectStep.update({
