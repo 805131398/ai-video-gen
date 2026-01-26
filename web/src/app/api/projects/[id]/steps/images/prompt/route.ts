@@ -15,8 +15,16 @@ export async function POST(
     }
 
     const { id: projectId } = await params;
-    const body = await request.json();
-    const { style } = body;
+
+    // 解析请求体，如果为空则使用默认值
+    let style: string | undefined;
+    try {
+      const body = await request.json();
+      style = body.style;
+    } catch (error) {
+      // 请求体为空或无效，使用默认值
+      style = undefined;
+    }
 
     console.log("[images/prompt] 开始生成提示词", { projectId, style, userId: session.user.id });
 
