@@ -165,25 +165,20 @@ export function PromptEditorDialog({
             >
               {isTranslating ? (
                 <>
-                  <Loader2 className="animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   翻译中...
                 </>
               ) : (
                 <>
                   翻译为中文
-                  <ArrowRight />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>
           </div>
 
-          {/* 分隔线 */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 w-px bg-border" />
-          </div>
-
           {/* 右侧面板 - 中文 */}
-          <div className="space-y-3 -ml-6">
+          <div className="space-y-3 border-l pl-6">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">中文翻译</label>
               <span className="text-xs text-muted-foreground">
@@ -205,12 +200,12 @@ export function PromptEditorDialog({
             >
               {isTranslating ? (
                 <>
-                  <Loader2 className="animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   翻译中...
                 </>
               ) : (
                 <>
-                  <ArrowLeft />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
                   翻译为英文
                 </>
               )}
