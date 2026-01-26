@@ -14,7 +14,6 @@ import {
   Film,
   ArrowRight,
   Play,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -31,10 +30,10 @@ interface Project {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const FEATURES = [
-  { icon: Wand2, title: "AI 标题生成" },
-  { icon: Sparkles, title: "智能文案创作" },
-  { icon: Image, title: "AI 图片生成" },
-  { icon: Film, title: "一键视频合成" },
+  { icon: Wand2, title: "AI 标题" },
+  { icon: Sparkles, title: "智能文案" },
+  { icon: Image, title: "图片生成" },
+  { icon: Film, title: "视频合成" },
 ];
 
 export default function HomePage() {
@@ -44,7 +43,7 @@ export default function HomePage() {
   const { data: projectsData } = useSWR<{
     data: Project[];
     pagination: { total: number };
-  }>("/api/projects?pageSize=3", fetcher);
+  }>("/api/projects?pageSize=5", fetcher);
 
   const recentProjects = projectsData?.data || [];
 
@@ -73,15 +72,15 @@ export default function HomePage() {
         {/* 左侧主内容 */}
         <div className="flex-1 flex flex-col gap-4 min-w-0">
           {/* Hero 区域 */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-5 shrink-0">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 shrink-0">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl" />
             <div className="relative flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <h1 className="text-xl font-bold text-white mb-1">
+                <h1 className="text-2xl font-bold text-white mb-2">
                   AI 视频创作工具
                 </h1>
-                <p className="text-sm text-blue-100/90 truncate">
+                <p className="text-sm text-blue-100/90">
                   输入主题，AI 自动生成标题、文案、图片和视频
                 </p>
               </div>
@@ -105,105 +104,102 @@ export default function HomePage() {
             </div>
           </Card>
 
-          {/* 最近作品 */}
-          <Card className="flex-1 p-4 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex items-center justify-between mb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800">最近作品</h2>
-              </div>
-              <Link
-                href="/projects"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-              >
-                全部 <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            <div className="flex-1 min-h-0">
-              {recentProjects.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                    <Video className="w-6 h-6 text-slate-300" />
-                  </div>
-                  <p className="text-slate-500 text-sm mb-3">暂无作品</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNewProject}
-                    disabled={isCreating}
-                    className="cursor-pointer"
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        创建中...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        创建第一个作品
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-3 h-full content-start">
-                  {recentProjects.map((project) => (
-                    <Link
-                      key={project.id}
-                      href={`/projects/${project.id}`}
-                      className="group block"
-                    >
-                      <div className="border border-slate-200 rounded-lg overflow-hidden hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
-                        <div className="aspect-video bg-slate-100 flex items-center justify-center">
-                          {project.coverUrl ? (
-                            <img
-                              src={project.coverUrl}
-                              alt={project.title || project.topic}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Video className="w-8 h-8 text-slate-300" />
-                          )}
-                        </div>
-                        <div className="p-2">
-                          <h3 className="font-medium text-sm text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                            {project.title || project.topic || "未命名作品"}
-                          </h3>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {new Date(project.updatedAt).toLocaleDateString("zh-CN")}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* 右侧功能特性 */}
-        <Card className="w-44 shrink-0 p-4 flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-4 h-4 text-blue-500" />
-            <h3 className="font-semibold text-slate-800 text-sm">功能特性</h3>
-          </div>
-          <div className="flex-1 flex flex-col justify-between">
-            {FEATURES.map((feature, index) => (
+          {/* 功能特性 - 横向排列 */}
+          <div className="grid grid-cols-4 gap-3 shrink-0">
+            {FEATURES.map((feature) => (
               <div
                 key={feature.title}
-                className="flex items-center gap-2.5 py-2"
+                className="flex items-center gap-2.5 p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 hover:shadow-sm transition-all cursor-default"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
                   <feature.icon className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-sm text-slate-700 font-medium leading-tight">
+                <span className="text-sm text-slate-700 font-medium">
                   {feature.title}
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* 留白区域 */}
+          <div className="flex-1" />
+        </div>
+
+        {/* 右侧最近作品 */}
+        <Card className="w-64 shrink-0 p-4 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-400" />
+              <h2 className="font-semibold text-slate-800">最近作品</h2>
+            </div>
+            <Link
+              href="/projects"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-0.5"
+            >
+              全部 <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {recentProjects.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                  <Video className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-slate-500 text-sm mb-3">暂无作品</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNewProject}
+                  disabled={isCreating}
+                  className="cursor-pointer"
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      创建中...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      创建作品
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentProjects.map((project) => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="group block"
+                  >
+                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                      <div className="w-14 h-10 rounded bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                        {project.coverUrl ? (
+                          <img
+                            src={project.coverUrl}
+                            alt={project.title || project.topic}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Video className="w-5 h-5 text-slate-300" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                          {project.title || project.topic || "未命名作品"}
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          {new Date(project.updatedAt).toLocaleDateString("zh-CN")}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       </div>
