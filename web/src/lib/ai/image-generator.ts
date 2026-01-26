@@ -8,6 +8,7 @@
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
 import { AIModelType } from "@/generated/prisma/enums";
 import { translateText } from "./translator";
+import { createAIClient } from "./client";
 
 // bltcy 的 providerName 标识
 const BLTCY_PROVIDER = "bltcy";
@@ -391,48 +392,15 @@ export async function generateImagePromptFromCopy(
 - 只输出提示词，不要其他内容
 ${style ? `\n风格要求：${style}` : ""}`;
 
-  console.log("[generateImagePromptFromCopy] 请求 URL:", config.apiUrl);
+  console.log("[generateImagePromptFromCopy] 调用 AI 客户端...");
 
-  let response;
-  try {
-    response = await fetch(config.apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.modelName,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: copywriting },
-        ],
-        temperature: 0.7,
-      }),
-    });
+  // 使用 AIClient 进行调用，提供更好的错误处理
+  const client = createAIClient(config);
+  const prompt = await client.generateText(copywriting, systemPrompt, {
+    temperature: 0.7,
+  });
 
-    console.log("[generateImagePromptFromCopy] 收到响应:", {
-      status: response.status,
-      statusText: response.statusText,
-      contentType: response.headers.get("content-type"),
-    });
-  } catch (error) {
-    console.error("[generateImagePromptFromCopy] Fetch 失败:", error);
-    throw new Error(`Failed to fetch AI API: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[generateImagePromptFromCopy] API 错误:", {
-      status: response.status,
-      statusText: response.statusText,
-      errorText,
-    });
-    throw new Error(`API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  const prompt = data.choices[0]?.message?.content || "";
+  console.log("[generateImagePromptFromCopy] 提示词生成成功:", prompt?.substring(0, 100));
 
   // 自动翻译为中文
   console.log("[generateImagePromptFromCopy] 开始翻译提示词为中文...");
