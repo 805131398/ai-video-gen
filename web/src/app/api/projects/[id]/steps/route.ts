@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { StepType, StepStatus } from "@/generated/prisma";
+import { StepType, StepStatus } from "@/generated/prisma/enums";
 
 // POST /api/projects/[id]/steps - 创建步骤记录
 export async function POST(

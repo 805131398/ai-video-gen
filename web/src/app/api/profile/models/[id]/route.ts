@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { AIModelType } from "@/generated/prisma";
+import { AIModelType } from "@/generated/prisma/enums";
 
 // PATCH /api/profile/models/[id] - 更新用户模型配置
 export async function PATCH(

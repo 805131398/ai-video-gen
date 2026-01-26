@@ -3,7 +3,7 @@
  */
 
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
-import { AIModelType } from "@/generated/prisma";
+import { AIModelType } from "@/generated/prisma/enums";
 
 export interface ImageGenerateInput {
   prompt: string;

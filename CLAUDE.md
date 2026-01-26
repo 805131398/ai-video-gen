@@ -86,3 +86,7 @@ TOPIC_INPUT → TITLE_GENERATE → TITLE_SELECT → ATTRIBUTE_SET → COPY_GENER
 
 ## 版本控制
 注意提交代码
+
+
+## Prisma 相关
+Prisma 7 的客户端结构不同，需要从具体文件导入

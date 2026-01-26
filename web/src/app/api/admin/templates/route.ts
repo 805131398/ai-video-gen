@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TemplateType } from "@/generated/prisma";
+import { TemplateType } from "@/generated/prisma/enums";
 
 // GET /api/admin/templates - 获取模板列表
 export async function GET(request: NextRequest) {

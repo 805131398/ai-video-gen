@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { AIModelType } from "@/generated/prisma";
+import { AIModelType } from "@/generated/prisma/enums";
 
 // GET /api/profile/models - 获取用户的模型配置
 export async function GET() {

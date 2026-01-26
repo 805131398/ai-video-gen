@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { AIModelType } from "@/generated/prisma";
+import { AIModelType } from "@/generated/prisma/enums";
 
 export interface AIConfigInput {
   tenantId?: string;

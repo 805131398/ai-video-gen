@@ -27,7 +27,7 @@ export type { VoiceGenerateRequest, VoiceGenerateResponse } from "./voice-client
 export { generateTitles, generateCopywriting } from "./text-generator";
 export type { TitleGenerateInput, CopywritingGenerateInput, TextGenerateResult } from "./text-generator";
 
-import { AIModelType } from "@/generated/prisma";
+import { AIModelType } from "@/generated/prisma/enums";
 import { createAIClient, AIClient } from "./client";
 import { createImageClient, ImageClient } from "./image-client";
 import { createVideoClient, VideoClient } from "./video-client";
