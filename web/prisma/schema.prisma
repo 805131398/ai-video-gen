@@ -1,0 +1,677 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== 枚举定义 ====================
+
+// 租户状态
+enum TenantStatus {
+  ACTIVE // 活跃
+  SUSPENDED // 暂停
+  EXPIRED // 过期
+}
+
+// 环境类型
+enum EnvType {
+  DEV // 开发环境
+  TEST // 测试环境
+  PROD // 生产环境
+}
+
+// 配置值类型
+enum ValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+// 任务类型
+enum TaskType {
+  CRON // 定时任务
+  INTERVAL // 间隔任务
+  ONCE // 一次性任务
+}
+
+// 任务执行状态
+enum TaskExecutionStatus {
+  RUNNING // 运行中
+  SUCCESS // 成功
+  FAILED // 失败
+}
+
+// ==================== AI 视频创作枚举 ====================
+
+// 作品状态
+enum ProjectStatus {
+  DRAFT // 草稿
+  IN_PROGRESS // 进行中
+  COMPLETED // 已完成
+  ARCHIVED // 已归档
+}
+
+// 步骤类型
+enum StepType {
+  TOPIC_INPUT // 主题输入
+  TITLE_GENERATE // 标题生成
+  TITLE_SELECT // 标题选择
+  ATTRIBUTE_SET // 文案属性设置
+  COPY_GENERATE // 文案生成
+  COPY_SELECT // 文案选择
+  COPY_SEGMENT // 文案分段
+  IMAGE_GENERATE // 图片生成
+  IMAGE_SELECT // 图片选择
+  VIDEO_GENERATE // 视频生成
+  VIDEO_SELECT // 视频选择
+  VOICE_CONFIG // 配音配置
+  VOICE_GENERATE // 配音生成
+  COMPOSE // 最终合成
+}
+
+// 步骤状态
+enum StepStatus {
+  PENDING // 待处理
+  GENERATING // 生成中
+  COMPLETED // 已完成
+  FAILED // 失败
+  SKIPPED // 跳过
+}
+
+// AI 模型类型
+enum AIModelType {
+  TEXT // 文本生成
+  IMAGE // 图片生成
+  VIDEO // 视频生成
+  VOICE // 语音生成
+}
+
+// 提示词模板类型
+enum TemplateType {
+  TITLE // 标题生成
+  COPYWRITING // 文案生成
+  IMAGE // 图片生成
+}
+
+// AI 调用日志状态
+enum AILogStatus {
+  SUCCESS // 成功
+  FAILED // 失败
+}
+
+// ==================== 租户模型 ====================
+
+// 租户表
+model Tenant {
+  id           String       @id @default(uuid())
+  tenantCode   String       @unique @map("tenant_code")
+  tenantName   String       @map("tenant_name")
+  contactName  String?      @map("contact_name")
+  contactPhone String?      @map("contact_phone")
+  contactEmail String?      @map("contact_email")
+  status       TenantStatus @default(ACTIVE)
+  expireAt     DateTime?    @map("expire_at")
+  config       Json?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // 关联
+  users            User[]
+  systemConfigs    SystemConfig[]
+  storageProviders StorageProvider[]
+  files            File[]
+  menus            Menu[]
+  roles            Role[]
+  scheduledTasks   ScheduledTask[]
+  operationLogs    OperationLog[]
+  notifications    Notification[]
+  dicts            Dict[]
+  // AI 视频创作关联
+  projects         Project[]
+  aiModelConfigs   AIModelConfig[]
+  promptTemplates  PromptTemplate[]
+  aiUsageLogs      AIUsageLog[]
+
+  @@map("tenants")
+}
+
+// ==================== NextAuth 相关模型 ====================
+
+// 用户表
+model User {
+  id            String    @id @default(uuid())
+  tenantId      String?   @map("tenant_id")
+  name          String?
+  email         String?   @unique
+  phone         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  phoneVerified DateTime? @map("phone_verified")
+  password      String?
+  image         String?
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  tenant   Tenant?    @relation(fields: [tenantId], references: [id])
+  accounts Account[]
+  sessions Session[]
+  roles    UserRole[]
+
+  // 创建/修改记录关联
+  createdMenus            Menu[]            @relation("MenuCreatedBy")
+  updatedMenus            Menu[]            @relation("MenuUpdatedBy")
+  createdRoles            Role[]            @relation("RoleCreatedBy")
+  updatedRoles            Role[]            @relation("RoleUpdatedBy")
+  createdSystemConfigs    SystemConfig[]    @relation("SystemConfigCreatedBy")
+  updatedSystemConfigs    SystemConfig[]    @relation("SystemConfigUpdatedBy")
+  createdStorageProviders StorageProvider[] @relation("StorageProviderCreatedBy")
+  updatedStorageProviders StorageProvider[] @relation("StorageProviderUpdatedBy")
+  createdFiles            File[]            @relation("FileCreatedBy")
+  deletedFiles            File[]            @relation("FileDeletedBy")
+  createdScheduledTasks   ScheduledTask[]   @relation("ScheduledTaskCreatedBy")
+  updatedScheduledTasks   ScheduledTask[]   @relation("ScheduledTaskUpdatedBy")
+  operationLogs           OperationLog[]
+  notifications           Notification[]
+  // AI 视频创作关联
+  projects                Project[]
+  aiModelConfigs          AIModelConfig[]
+  promptTemplates         PromptTemplate[]
+  aiUsageLogs             AIUsageLog[]
+
+  @@map("users")
+}
+
+// NextAuth Account 表
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session 表
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth VerificationToken 表
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ==================== 系统管理模型 ====================
+
+// 系统参数表
+model SystemConfig {
+  id          String    @id @default(uuid())
+  tenantId    String?   @map("tenant_id")
+  env         EnvType   @default(PROD)
+  groupCode   String    @map("group_code")
+  configKey   String    @map("config_key")
+  configValue String    @map("config_value") @db.Text
+  valueType   ValueType @default(STRING) @map("value_type")
+  isEncrypted Boolean   @default(false) @map("is_encrypted")
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdById String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedById String?   @map("updated_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant    Tenant? @relation(fields: [tenantId], references: [id])
+  createdBy User    @relation("SystemConfigCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?   @relation("SystemConfigUpdatedBy", fields: [updatedById], references: [id])
+
+  @@unique([tenantId, env, groupCode, configKey])
+  @@map("system_configs")
+}
+
+// 存储提供商配置表
+model StorageProvider {
+  id           String   @id @default(uuid())
+  tenantId     String?  @map("tenant_id")
+  providerCode String   @map("provider_code")
+  providerName String   @map("provider_name")
+  config       Json
+  isDefault    Boolean  @default(false) @map("is_default")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedById  String?  @map("updated_by")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant? @relation(fields: [tenantId], references: [id])
+  createdBy User    @relation("StorageProviderCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?   @relation("StorageProviderUpdatedBy", fields: [updatedById], references: [id])
+  files     File[]
+
+  @@map("storage_providers")
+}
+
+// 文件表
+model File {
+  id           String    @id @default(uuid())
+  tenantId     String?   @map("tenant_id")
+  providerId   String    @map("provider_id")
+  originalName String    @map("original_name")
+  storageKey   String    @map("storage_key")
+  fileUrl      String    @map("file_url")
+  fileType     String    @map("file_type")
+  fileSize     BigInt    @map("file_size")
+  businessType String?   @map("business_type")
+  businessId   String?   @map("business_id")
+  createdById  String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedById  String?   @map("deleted_by")
+  deletedAt    DateTime? @map("deleted_at")
+
+  tenant    Tenant?         @relation(fields: [tenantId], references: [id])
+  provider  StorageProvider @relation(fields: [providerId], references: [id])
+  createdBy User            @relation("FileCreatedBy", fields: [createdById], references: [id])
+  deletedBy User?           @relation("FileDeletedBy", fields: [deletedById], references: [id])
+
+  @@map("files")
+}
+
+// 菜单表
+model Menu {
+  id          String   @id @default(uuid())
+  tenantId    String?  @map("tenant_id")
+  parentId    String?  @map("parent_id")
+  name        String
+  label       String
+  href        String?
+  icon        String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedById String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
+  parent    Menu?      @relation("MenuChildren", fields: [parentId], references: [id])
+  children  Menu[]     @relation("MenuChildren")
+  createdBy User       @relation("MenuCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?      @relation("MenuUpdatedBy", fields: [updatedById], references: [id])
+  roles     RoleMenu[]
+
+  @@map("menus")
+}
+
+// 角色表
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String?  @map("tenant_id")
+  name        String
+  code        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedById String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id])
+  createdBy   User             @relation("RoleCreatedBy", fields: [createdById], references: [id])
+  updatedBy   User?            @relation("RoleUpdatedBy", fields: [updatedById], references: [id])
+  menus       RoleMenu[]
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, code])
+  @@map("roles")
+}
+
+// 权限表
+model Permission {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  group       String? // 权限分组：user, role, menu, config, log, file 等
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+// 角色-菜单关联表
+model RoleMenu {
+  roleId String @map("role_id")
+  menuId String @map("menu_id")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, menuId])
+  @@map("role_menus")
+}
+
+// 角色-权限关联表
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// 用户-角色关联表
+model UserRole {
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// ==================== 辅助功能模型 ====================
+
+// 定时任务配置表
+model ScheduledTask {
+  id              String    @id @default(uuid())
+  tenantId        String?   @map("tenant_id")
+  taskCode        String    @unique @map("task_code")
+  taskName        String    @map("task_name")
+  taskType        TaskType  @map("task_type")
+  cronExpression  String?   @map("cron_expression")
+  intervalSeconds Int?      @map("interval_seconds")
+  handlerClass    String    @map("handler_class")
+  params          Json?
+  isActive        Boolean   @default(true) @map("is_active")
+  lastRunAt       DateTime? @map("last_run_at")
+  nextRunAt       DateTime? @map("next_run_at")
+  createdById     String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedById     String?   @map("updated_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant?            @relation(fields: [tenantId], references: [id])
+  createdBy     User               @relation("ScheduledTaskCreatedBy", fields: [createdById], references: [id])
+  updatedBy     User?              @relation("ScheduledTaskUpdatedBy", fields: [updatedById], references: [id])
+  executionLogs TaskExecutionLog[]
+
+  @@map("scheduled_tasks")
+}
+
+// 任务执行记录表
+model TaskExecutionLog {
+  id           String              @id @default(uuid())
+  taskId       String              @map("task_id")
+  status       TaskExecutionStatus
+  startedAt    DateTime            @map("started_at")
+  finishedAt   DateTime?           @map("finished_at")
+  durationMs   Int?                @map("duration_ms")
+  result       Json?
+  errorMessage String?             @map("error_message") @db.Text
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  task ScheduledTask @relation(fields: [taskId], references: [id])
+
+  @@map("task_execution_logs")
+}
+
+// 操作日志表
+model OperationLog {
+  id         String   @id @default(uuid())
+  tenantId   String?  @map("tenant_id")
+  userId     String   @map("user_id")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  oldData    Json?    @map("old_data")
+  newData    Json?    @map("new_data")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+
+  @@map("operation_logs")
+}
+
+// 通知表
+model Notification {
+  id        String    @id @default(uuid())
+  tenantId  String?   @map("tenant_id")
+  userId    String    @map("user_id")
+  title     String
+  content   String    @db.Text
+  type      String
+  isRead    Boolean   @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// 字典表
+model Dict {
+  id          String   @id @default(uuid())
+  tenantId    String?  @map("tenant_id")
+  code        String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant?    @relation(fields: [tenantId], references: [id])
+  items  DictItem[]
+
+  @@unique([tenantId, code])
+  @@map("dicts")
+}
+
+// 字典项表
+model DictItem {
+  id        String   @id @default(uuid())
+  dictId    String   @map("dict_id")
+  label     String
+  value     String
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dict Dict @relation(fields: [dictId], references: [id], onDelete: Cascade)
+
+  @@map("dict_items")
+}
+
+// ==================== AI 视频创作模型 ====================
+
+// 作品表
+model Project {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  tenantId         String?       @map("tenant_id")
+  title            String?
+  topic            String
+  status           ProjectStatus @default(DRAFT)
+  currentVersionId String?       @map("current_version_id")
+  coverUrl         String?       @map("cover_url")
+  finalVideoUrl    String?       @map("final_video_url")
+  isPublic         Boolean       @default(false) @map("is_public")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id])
+  tenant   Tenant?          @relation(fields: [tenantId], references: [id])
+  versions ProjectVersion[]
+  aiLogs   AIUsageLog[]
+
+  @@map("projects")
+}
+
+// 版本表
+model ProjectVersion {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  parentVersionId String?  @map("parent_version_id")
+  versionNo       Int      @map("version_no")
+  branchName      String?  @map("branch_name")
+  currentStep     StepType @default(TOPIC_INPUT) @map("current_step")
+  isMain          Boolean  @default(false) @map("is_main")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentVersion ProjectVersion?  @relation("VersionBranch", fields: [parentVersionId], references: [id])
+  childVersions ProjectVersion[] @relation("VersionBranch")
+  steps         ProjectStep[]
+
+  @@map("project_versions")
+}
+
+// 步骤记录表
+model ProjectStep {
+  id               String     @id @default(uuid())
+  versionId        String     @map("version_id")
+  stepType         StepType   @map("step_type")
+  selectedOptionId String?    @map("selected_option_id")
+  attributes       Json?
+  status           StepStatus @default(PENDING)
+  createdAt        DateTime   @default(now()) @map("created_at")
+
+  version ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  options StepOption[]
+
+  @@unique([versionId, stepType])
+  @@map("project_steps")
+}
+
+// 步骤选项表
+model StepOption {
+  id         String   @id @default(uuid())
+  stepId     String   @map("step_id")
+  content    String?  @db.Text
+  assetUrl   String?  @map("asset_url")
+  metadata   Json?
+  isSelected Boolean  @default(false) @map("is_selected")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  step ProjectStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@map("step_options")
+}
+
+// AI 模型配置表
+model AIModelConfig {
+  id           String      @id @default(uuid())
+  tenantId     String?     @map("tenant_id")
+  userId       String?     @map("user_id")
+  modelType    AIModelType @map("model_type")
+  providerName String      @map("provider_name")
+  apiUrl       String      @map("api_url")
+  apiKey       String      @map("api_key")
+  modelName    String      @map("model_name")
+  config       Json?
+  isDefault    Boolean     @default(false) @map("is_default")
+  isActive     Boolean     @default(true) @map("is_active")
+  priority     Int         @default(0)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  tenant Tenant?      @relation(fields: [tenantId], references: [id])
+  user   User?        @relation(fields: [userId], references: [id])
+  aiLogs AIUsageLog[]
+
+  @@map("ai_model_configs")
+}
+
+// 提示词模板表
+model PromptTemplate {
+  id            String       @id @default(uuid())
+  tenantId      String?      @map("tenant_id")
+  userId        String?      @map("user_id")
+  templateType  TemplateType @map("template_type")
+  name          String
+  description   String?
+  category      String?
+  promptContent String       @map("prompt_content") @db.Text
+  variables     Json?
+  isSystem      Boolean      @default(false) @map("is_system")
+  isActive      Boolean      @default(true) @map("is_active")
+  usageCount    Int          @default(0) @map("usage_count")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@map("prompt_templates")
+}
+
+// AI 调用日志表
+model AIUsageLog {
+  id            String      @id @default(uuid())
+  tenantId      String?     @map("tenant_id")
+  userId        String      @map("user_id")
+  projectId     String?     @map("project_id")
+  modelType     AIModelType @map("model_type")
+  modelConfigId String      @map("model_config_id")
+  inputTokens   Int?        @map("input_tokens")
+  outputTokens  Int?        @map("output_tokens")
+  cost          Decimal?    @db.Decimal(10, 6)
+  latencyMs     Int?        @map("latency_ms")
+  status        AILogStatus
+  errorMessage  String?     @map("error_message") @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  tenant      Tenant?       @relation(fields: [tenantId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  project     Project?      @relation(fields: [projectId], references: [id])
+  modelConfig AIModelConfig @relation(fields: [modelConfigId], references: [id])
+
+  @@map("ai_usage_logs")
+}
