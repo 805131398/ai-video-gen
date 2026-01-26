@@ -241,7 +241,12 @@ export class AIClient {
     try {
       const data = JSON.parse(responseText);
       return this.parseResponse(data);
-    } catch {
+    } catch (error) {
+      console.error("[AIClient.chat] JSON 解析失败:", {
+        error: error instanceof Error ? error.message : String(error),
+        responseText: responseText.substring(0, 500),
+        responseLength: responseText.length,
+      });
       throw new Error(
         `AI API 返回格式错误，无法解析为 JSON。响应内容: ${responseText.substring(0, 200)}...`
       );

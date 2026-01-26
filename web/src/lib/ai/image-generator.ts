@@ -424,8 +424,15 @@ ${style ? `\n风格要求：${style}` : ""}`;
 
   // 自动翻译为中文
   console.log("[generateImagePromptFromCopy] 开始翻译提示词为中文...");
-  const translation = await translateText(prompt, 'en-zh', userId, tenantId);
-  console.log("[generateImagePromptFromCopy] 翻译完成:", translation?.substring(0, 50));
+  let translation = "";
+  try {
+    translation = await translateText(prompt, 'en-zh', userId, tenantId);
+    console.log("[generateImagePromptFromCopy] 翻译完成:", translation?.substring(0, 50));
+  } catch (error) {
+    console.error("[generateImagePromptFromCopy] 翻译失败:", error);
+    // 翻译失败时使用空字符串，不影响主流程
+    translation = "";
+  }
 
   return { prompt, translation };
 }
