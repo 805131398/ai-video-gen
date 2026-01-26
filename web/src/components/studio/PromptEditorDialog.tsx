@@ -136,7 +136,7 @@ export function PromptEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1400px]">
+      <DialogContent className="w-[95vw] max-w-[1600px]">
         <DialogHeader>
           <DialogTitle>编辑提示词</DialogTitle>
         </DialogHeader>
