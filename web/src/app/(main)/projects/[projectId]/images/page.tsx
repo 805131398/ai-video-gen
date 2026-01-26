@@ -593,7 +593,7 @@ export default function ImagesPage() {
           {batches.length > 0 ? (
             // 有批次数据时，按批次分组显示
             batches.map((batch, batchIndex) => (
-              <div key={batch.id} className="space-y-4">
+              <div key={`batch-${batchIndex}`} className="space-y-4">
                 {/* 批次标题 */}
                 <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2">
