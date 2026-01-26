@@ -146,26 +146,7 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                   <Video className="w-6 h-6 text-slate-300" />
                 </div>
-                <p className="text-slate-500 text-sm mb-3">暂无作品</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNewProject}
-                  disabled={isCreating}
-                  className="cursor-pointer"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      创建中...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      创建作品
-                    </>
-                  )}
-                </Button>
+                <p className="text-slate-500 text-sm">暂无作品</p>
               </div>
             ) : (
               <div className="space-y-2">
