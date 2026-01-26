@@ -393,21 +393,33 @@ ${style ? `\n风格要求：${style}` : ""}`;
 
   console.log("[generateImagePromptFromCopy] 请求 URL:", config.apiUrl);
 
-  const response = await fetch(config.apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.modelName,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: copywriting },
-      ],
-      temperature: 0.7,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(config.apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.modelName,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: copywriting },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    console.log("[generateImagePromptFromCopy] 收到响应:", {
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get("content-type"),
+    });
+  } catch (error) {
+    console.error("[generateImagePromptFromCopy] Fetch 失败:", error);
+    throw new Error(`Failed to fetch AI API: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();

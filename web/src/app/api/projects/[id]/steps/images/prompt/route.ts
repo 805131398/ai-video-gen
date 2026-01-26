@@ -46,6 +46,7 @@ export async function POST(
     console.log("[images/prompt] 文案内容:", copyContent?.substring(0, 100));
 
     // 调用提示词生成服务
+    console.log("[images/prompt] 调用 generateImagePromptFromCopy...");
     const result = await generateImagePromptFromCopy(
       copyContent,
       style,
@@ -56,6 +57,8 @@ export async function POST(
     console.log("[images/prompt] 提示词生成成功", {
       promptLength: result.prompt?.length,
       translationLength: result.translation?.length,
+      promptPreview: result.prompt?.substring(0, 100),
+      translationPreview: result.translation?.substring(0, 100),
     });
 
     // 返回双语提示词结果
