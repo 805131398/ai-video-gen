@@ -17,12 +17,13 @@ export async function POST(request: NextRequest) {
 
     // 如果提供了文案但没有提示词，自动生成提示词
     if (!prompt && copywriting) {
-      finalPrompt = await generateImagePromptFromCopy(
+      const result = await generateImagePromptFromCopy(
         copywriting,
         style,
         session.user.id,
         session.user.tenantId
       );
+      finalPrompt = result.prompt;  // 只使用英文提示词
     }
 
     if (!finalPrompt) {
