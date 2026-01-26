@@ -497,7 +497,7 @@ export default function ImagesPage() {
 
   const isLoading = isGenerating || isUploading || isSubmitting;
 
-  // 获取所有图片（合并批次中的图片）
+  // 获取所有图片（用于统计和空状态判断）
   const allImages = batches.length > 0
     ? batches.flatMap((batch) => batch.images)
     : images;
@@ -587,17 +587,68 @@ export default function ImagesPage() {
         </div>
       )}
 
-      {/* 瀑布流图片展示 */}
+      {/* 按批次分组显示图片 */}
       {allImages.length > 0 ? (
-        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
-          {allImages.map((image) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              isSelected={selectedIds.includes(image.id)}
-              onToggleSelect={() => handleToggleSelect(image.id)}
-            />
-          ))}
+        <div className="space-y-8">
+          {batches.length > 0 ? (
+            // 有批次数据时，按批次分组显示
+            batches.map((batch, batchIndex) => (
+              <div key={batch.id} className="space-y-4">
+                {/* 批次标题 */}
+                <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-sm font-medium text-blue-600">
+                        {batchIndex + 1}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-900">
+                        批次 {batchIndex + 1}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {batch.images.length} 张图片
+                        {batch.createdAt && (
+                          <span className="ml-2">
+                            · {new Date(batch.createdAt).toLocaleString("zh-CN", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 批次图片 */}
+                <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
+                  {batch.images.map((image) => (
+                    <ImageCard
+                      key={image.id}
+                      image={image}
+                      isSelected={selectedIds.includes(image.id)}
+                      onToggleSelect={() => handleToggleSelect(image.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            // 没有批次数据时，直接显示所有图片
+            <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
+              {allImages.map((image) => (
+                <ImageCard
+                  key={image.id}
+                  image={image}
+                  isSelected={selectedIds.includes(image.id)}
+                  onToggleSelect={() => handleToggleSelect(image.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : !isBackgroundGenerating ? (
         /* 空状态 */
