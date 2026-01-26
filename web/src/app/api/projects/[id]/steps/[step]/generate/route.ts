@@ -3,13 +3,16 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StepType, StepStatus } from "@/generated/prisma/enums";
 import { ROUTE_TO_STEP, type RouteStep } from "@/types/ai-video";
+import { generateTitles, generateCopywriting } from "@/lib/ai/text-generator";
 
 // 步骤生成逻辑映射
 async function generateStepContent(
   step: RouteStep,
   projectId: string,
   versionId: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  userId: string,
+  tenantId?: string | null
 ) {
   const stepType = ROUTE_TO_STEP[step];
 
@@ -27,20 +30,12 @@ async function generateStepContent(
         data: { topic: topic.trim() },
       });
 
-      // 调用标题生成 API
-      const res = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/titles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), count: 5 }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "生成标题失败");
-      }
-
-      const data = await res.json();
-      const titles = data.data || [];
+      // 直接调用标题生成函数
+      const titles = await generateTitles(
+        { topic: topic.trim(), count: 5 },
+        userId,
+        tenantId
+      );
 
       // 创建或更新标题选择步骤
       const titleStep = await prisma.projectStep.upsert({
@@ -60,7 +55,7 @@ async function generateStepContent(
       // 删除旧选项并创建新选项
       await prisma.stepOption.deleteMany({ where: { stepId: titleStep.id } });
       await prisma.stepOption.createMany({
-        data: titles.map((t: { content: string }, i: number) => ({
+        data: titles.map((t, i) => ({
           stepId: titleStep.id,
           content: t.content,
           sortOrder: i,
@@ -89,25 +84,17 @@ async function generateStepContent(
       const selectedTitle = titleStep?.options[0]?.content || "";
       const project = await prisma.project.findUnique({ where: { id: projectId } });
 
-      // 调用文案生成 API
-      const res = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/copywriting`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: project?.topic,
+      // 直接调用文案生成函数
+      const copies = await generateCopywriting(
+        {
+          topic: project?.topic || "",
           title: selectedTitle,
           attributes,
           count: 3,
-        }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "生成文案失败");
-      }
-
-      const data = await res.json();
-      const copies = data.data || [];
+        },
+        userId,
+        tenantId
+      );
 
       // 保存属性步骤
       await prisma.projectStep.upsert({
@@ -144,7 +131,7 @@ async function generateStepContent(
       // 删除旧选项并创建新选项
       await prisma.stepOption.deleteMany({ where: { stepId: copyStep.id } });
       await prisma.stepOption.createMany({
-        data: copies.map((c: { content: string }, i: number) => ({
+        data: copies.map((c, i) => ({
           stepId: copyStep.id,
           content: c.content,
           sortOrder: i,
@@ -473,7 +460,14 @@ export async function POST(
       return NextResponse.json({ error: "无效的步骤" }, { status: 400 });
     }
 
-    const result = await generateStepContent(step as RouteStep, projectId, versionId, body);
+    const result = await generateStepContent(
+      step as RouteStep,
+      projectId,
+      versionId,
+      body,
+      session.user.id,
+      session.user.tenantId
+    );
 
     return NextResponse.json(result);
   } catch (error) {

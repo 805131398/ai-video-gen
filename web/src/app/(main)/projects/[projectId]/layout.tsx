@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StepIndicator, type Step, type StepStatus } from "@/components/studio";
 import { useProject } from "@/hooks/use-project";
-import { Plus, Clock, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import {
   ROUTE_STEP_ORDER,
   ROUTE_STEP_LABELS,
@@ -71,23 +70,6 @@ export default function ProjectLayout({ children }: ProjectLayoutProps) {
     router.push(`/projects/${projectId}/${step}`);
   };
 
-  // 处理新建作品
-  const handleNewProject = async () => {
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (data.id) {
-        router.push(`/projects/${data.id}/topic`);
-      }
-    } catch (error) {
-      console.error("创建项目失败:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -112,59 +94,19 @@ export default function ProjectLayout({ children }: ProjectLayoutProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Step Indicator */}
-          <Card className="p-4">
-            <StepIndicator
-              steps={steps}
-              currentStep={currentRouteStep}
-              onStepClick={handleStepClick}
-            />
-          </Card>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="space-y-6">
+        {/* Step Indicator */}
+        <Card className="p-4">
+          <StepIndicator
+            steps={steps}
+            currentStep={currentRouteStep}
+            onStepClick={handleStepClick}
+          />
+        </Card>
 
-          {/* Step Content */}
-          <Card className="p-6">{children}</Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* New Project Button */}
-          <Button
-            className="w-full bg-orange-500 hover:bg-orange-600"
-            onClick={handleNewProject}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            新建作品
-          </Button>
-
-          {/* Recent Projects */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="w-4 h-4 text-slate-500" />
-              <h3 className="font-medium text-slate-700">最近作品</h3>
-            </div>
-            <div className="space-y-2 text-sm text-slate-500">
-              <p>暂无最近作品</p>
-              <Link
-                href="/projects"
-                className="text-blue-600 hover:underline block"
-              >
-                查看全部作品 →
-              </Link>
-            </div>
-          </Card>
-
-          {/* Project Info */}
-          {project.topic && (
-            <Card className="p-4">
-              <h3 className="font-medium text-slate-700 mb-2">当前项目</h3>
-              <p className="text-sm text-slate-500 line-clamp-3">{project.topic}</p>
-            </Card>
-          )}
-        </div>
+        {/* Step Content */}
+        <Card className="p-6">{children}</Card>
       </div>
     </div>
   );
