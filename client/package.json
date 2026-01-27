@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:electron": "tsc electron/*.ts --outDir electron --module commonjs --target es2020 --esModuleInterop --skipLibCheck",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "electron": "npm run build:electron && electron .",
     "electron:dev": "npm run build:electron && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
