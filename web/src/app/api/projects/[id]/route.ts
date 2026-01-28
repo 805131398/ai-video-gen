@@ -85,6 +85,10 @@ export async function GET(
         userId: session.user.id,
       },
       include: {
+        theme: true,
+        characters: {
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        },
         versions: {
           orderBy: { createdAt: "desc" },
           include: {
@@ -143,6 +147,22 @@ export async function GET(
         id: currentVersion?.id || "",
         versionNo: currentVersion?.versionNo || 1,
       },
+      theme: project.theme ? {
+        id: project.theme.id,
+        name: project.theme.name,
+        description: project.theme.description,
+      } : (project.themeName ? {
+        id: null,
+        name: project.themeName,
+        description: project.themeDesc,
+      } : null),
+      characters: project.characters.map((char) => ({
+        id: char.id,
+        name: char.name,
+        description: char.description,
+        avatarUrl: char.avatarUrl,
+        attributes: char.attributes,
+      })),
       steps: stepsData,
     };
 
@@ -185,6 +205,9 @@ export async function PUT(
         finalVideoUrl: body.finalVideoUrl,
         isPublic: body.isPublic,
         currentVersionId: body.currentVersionId,
+        themeId: body.themeId,
+        themeName: body.themeName,
+        themeDesc: body.themeDesc,
       },
     });
 

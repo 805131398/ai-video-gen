@@ -30,6 +30,29 @@ export type AILogStatus = 'SUCCESS' | 'FAILED';
 
 // ==================== Project Types ====================
 
+export interface ProjectTheme {
+  id: string;
+  name: string;
+  description?: string | null;
+  keywords?: string[];
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface ProjectCharacter {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  avatarUrl?: string | null;
+  attributes?: Record<string, unknown> | null;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 export interface Project {
   id: string;
   userId: string;
@@ -41,9 +64,15 @@ export interface Project {
   coverUrl?: string | null;
   finalVideoUrl?: string | null;
   isPublic: boolean;
+  // 主题相关
+  themeId?: string | null;
+  themeName?: string | null;
+  themeDesc?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   // Relations
+  theme?: ProjectTheme | null;
+  characters?: ProjectCharacter[];
   versions?: ProjectVersion[];
   currentVersion?: ProjectVersion | null;
 }
@@ -179,6 +208,16 @@ export interface PromptVariable {
 export interface CreateProjectRequest {
   topic: string;
   title?: string;
+  themeId?: string;
+  themeName?: string;
+  themeDesc?: string;
+  characters?: Array<{
+    name: string;
+    description: string;
+    avatarUrl?: string;
+    attributes?: Record<string, unknown>;
+    sortOrder?: number;
+  }>;
 }
 
 export interface UpdateProjectRequest {
@@ -188,6 +227,9 @@ export interface UpdateProjectRequest {
   coverUrl?: string;
   finalVideoUrl?: string;
   isPublic?: boolean;
+  themeId?: string;
+  themeName?: string;
+  themeDesc?: string;
 }
 
 export interface CreateVersionRequest {
@@ -384,6 +426,18 @@ export interface ProjectPageResponse {
     id: string;
     versionNo: number;
   };
+  theme?: {
+    id: string | null;
+    name: string;
+    description?: string | null;
+  } | null;
+  characters?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    avatarUrl?: string | null;
+    attributes?: Record<string, unknown> | null;
+  }>;
   steps: {
     topic: { value: string } | null;
     titles: { options: TitleOption[]; selectedId: string | null } | null;
