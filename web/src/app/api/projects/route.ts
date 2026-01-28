@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { topic } = body;
+    const { topic, themeId, themeName, themeDesc, characters } = body;
 
     // 创建作品和初始版本（允许空主题，用于先创建后编辑流程）
     const project = await prisma.project.create({
@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
         tenantId: session.user.tenantId,
         topic: topic || "",
         status: ProjectStatus.DRAFT,
+        themeId,
+        themeName,
+        themeDesc,
         versions: {
           create: {
             versionNo: 1,
@@ -77,9 +80,22 @@ export async function POST(request: NextRequest) {
             currentStep: "TOPIC_INPUT",
           },
         },
+        // 如果提供了角色数据，一起创建
+        ...(characters && characters.length > 0 && {
+          characters: {
+            create: characters.map((char: any, index: number) => ({
+              name: char.name,
+              description: char.description,
+              avatarUrl: char.avatarUrl,
+              attributes: char.attributes,
+              sortOrder: char.sortOrder ?? index,
+            })),
+          },
+        }),
       },
       include: {
         versions: true,
+        characters: true,
       },
     });
 

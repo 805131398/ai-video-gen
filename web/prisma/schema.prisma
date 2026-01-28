@@ -560,13 +560,19 @@ model Project {
   coverUrl         String?       @map("cover_url")
   finalVideoUrl    String?       @map("final_video_url")
   isPublic         Boolean       @default(false) @map("is_public")
+  // 主题相关字段
+  themeId          String?       @map("theme_id")
+  themeName        String?       @map("theme_name")
+  themeDesc        String?       @map("theme_desc") @db.Text
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  user     User             @relation(fields: [userId], references: [id])
-  tenant   Tenant?          @relation(fields: [tenantId], references: [id])
-  versions ProjectVersion[]
-  aiLogs   AIUsageLog[]
+  user       User               @relation(fields: [userId], references: [id])
+  tenant     Tenant?            @relation(fields: [tenantId], references: [id])
+  theme      ProjectTheme?      @relation(fields: [themeId], references: [id])
+  versions   ProjectVersion[]
+  aiLogs     AIUsageLog[]
+  characters ProjectCharacter[]
 
   @@map("projects")
 }
@@ -692,6 +698,41 @@ model AIUsageLog {
   modelConfig AIModelConfig @relation(fields: [modelConfigId], references: [id])
 
   @@map("ai_usage_logs")
+}
+
+// ==================== 卡密激活模型 ====================
+
+// 项目主题表
+model ProjectTheme {
+  id          String    @id @default(uuid())
+  name        String    // 主题名称（健康、文旅、美食等）
+  description String?   // 主题描述
+  keywords    String[]  // 关键词
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  projects Project[]
+
+  @@map("project_themes")
+}
+
+// 项目角色表（用于角色一致性）
+model ProjectCharacter {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  name        String   // 角色名称
+  description String   @db.Text // 角色描述（用于生成时保持一致性）
+  avatarUrl   String?  @map("avatar_url") // 角色头像
+  attributes  Json?    // 角色属性（年龄、性别、外貌特征等）
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_characters")
 }
 
 // ==================== 卡密激活模型 ====================
