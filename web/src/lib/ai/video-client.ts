@@ -307,6 +307,43 @@ export class VideoClient {
         }
         break;
 
+      case "veo":
+        body.prompt = request.prompt;
+        body.model = this.modelName;
+
+        // 图生视频：如果提供了图片 URL，使用 images 数组
+        if (request.imageUrl) {
+          body.images = [request.imageUrl];
+          // 图生视频模式下 aspect_ratio 可选，不传时根据参考图自动匹配
+          if (request.aspectRatio) {
+            body.aspect_ratio = request.aspectRatio;
+          }
+        } else {
+          // 文生视频模式支持 aspect_ratio 参数
+          body.aspect_ratio = request.aspectRatio || this.config.defaultAspectRatio || "16:9";
+        }
+
+        // enhance_prompt: 是否优化提示词（中文转英文）
+        if (this.config.extraHeaders?.enhance_prompt !== undefined) {
+          body.enhance_prompt = this.config.extraHeaders.enhance_prompt;
+        }
+
+        // enable_upsample: 是否分辨率提升（返回1080p）
+        if (this.config.extraHeaders?.enable_upsample !== undefined) {
+          body.enable_upsample = this.config.extraHeaders.enable_upsample;
+        }
+
+        // 支持额外的图片（通过 extraHeaders 传递）
+        if (this.config.extraHeaders?.additional_images) {
+          const additionalImages = this.config.extraHeaders.additional_images as string[];
+          if (body.images) {
+            body.images = [...body.images, ...additionalImages];
+          } else {
+            body.images = additionalImages;
+          }
+        }
+        break;
+
       default:
         // 通用格式
         if (request.duration) body.duration = request.duration;
@@ -385,10 +422,17 @@ export class VideoClient {
       thumbnailUrl = getByPath(data, "result.data[0].thumbnail_url") as string | undefined;
     }
 
+    // 提取进度：支持数字和字符串格式
+    let progress = getByPath(data, "progress") as number | string | undefined;
+    if (typeof progress === "string") {
+      // Veo 返回的是字符串格式（如 "100%"），需要转换为数字
+      progress = parseInt(progress.replace("%", ""), 10) || 0;
+    }
+
     return {
       taskId,
       status,
-      progress: getByPath(data, "progress") as number | undefined,
+      progress: progress as number | undefined,
       videoUrl: status === "completed" ? getByPath(data, videoUrlPath) as string : undefined,
       thumbnailUrl,
       duration: getByPath(data, "duration") as number | undefined,

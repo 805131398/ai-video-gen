@@ -23,7 +23,7 @@ import { toast } from "sonner";
 type AIModelType = "TEXT" | "IMAGE" | "VIDEO" | "VOICE";
 type APIFormat = "openai" | "anthropic" | "qwen" | "zhipu" | "baidu" | "custom";
 type ImageProvider = "openai" | "stability" | "qwen-image" | "zhipu-image" | "fal" | "bltcy" | "custom";
-type VideoProvider = "sora" | "runway" | "kling" | "zhipu-video" | "fal-video" | "bltcy" | "toapis" | "wan2.6" | "custom";
+type VideoProvider = "sora" | "runway" | "kling" | "zhipu-video" | "fal-video" | "bltcy" | "toapis" | "wan2.6" | "veo" | "custom";
 type VoiceProvider = "openai-tts" | "elevenlabs" | "azure-tts" | "aliyun-tts" | "minimax-tts" | "custom";
 
 interface ModelConfigOptions {
@@ -91,6 +91,7 @@ const VIDEO_PROVIDER_LABELS: Record<VideoProvider, string> = {
   bltcy: "bltcy",
   toapis: "toapis Sora2",
   "wan2.6": "阿里云万相 Wan2.6",
+  veo: "Google Veo",
   custom: "自定义",
 };
 

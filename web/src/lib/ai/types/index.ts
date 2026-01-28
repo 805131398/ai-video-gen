@@ -118,6 +118,7 @@ export type VideoProvider =
   | "bltcy"            // bltcy 视频生成
   | "toapis"           // toapis Sora2 视频生成
   | "wan2.6"           // 阿里云万相 Wan2.6 视频生成
+  | "veo"              // Google Veo 视频生成
   | "custom";
 
 export interface VideoConfigOptions extends BaseConfigOptions {
@@ -392,6 +393,19 @@ export const VIDEO_FORMAT_DEFAULTS: Record<string, Partial<VideoConfigOptions>> 
     maxWaitTime: 600000,  // 最大等待 10 分钟
     defaultDuration: 5,
     defaultResolution: "720p",
+    defaultAspectRatio: "16:9",
+  },
+  veo: {
+    provider: "veo",
+    submitEndpoint: "/v2/videos/generations",
+    statusEndpoint: "/v2/videos/generations/{task_id}",
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    taskIdPath: "task_id",
+    taskStatusPath: "status",
+    videoUrlPath: "data.output",
+    pollInterval: 10000,  // 10 秒轮询间隔
+    maxWaitTime: 600000,  // 最大等待 10 分钟
     defaultAspectRatio: "16:9",
   },
 };
