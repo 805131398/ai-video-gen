@@ -16,7 +16,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus } from 'lucide-react';
+import { Plus, GripVertical } from 'lucide-react';
 import { ScriptScene } from '../../types';
 
 interface DraggableSceneCardProps {
@@ -46,12 +46,19 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete }: DraggableSceneCa
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className="flex-shrink-0 w-64 bg-slate-50 rounded-lg border-2 border-slate-200 p-4 hover:border-blue-400 transition-colors cursor-move"
+      className="flex-shrink-0 w-64 bg-slate-50 rounded-lg border-2 border-slate-200 p-4 hover:border-blue-400 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-slate-900">场景 {index + 1}</h3>
+        <div className="flex items-center gap-2">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-move p-1 hover:bg-slate-200 rounded"
+          >
+            <GripVertical className="w-4 h-4 text-slate-400" />
+          </div>
+          <h3 className="font-semibold text-slate-900">场景 {index + 1}</h3>
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
