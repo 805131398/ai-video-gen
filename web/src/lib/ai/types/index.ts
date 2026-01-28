@@ -116,6 +116,8 @@ export type VideoProvider =
   | "zhipu-video"      // 智谱 CogVideo
   | "fal-video"        // fal.ai 视频模型
   | "bltcy"            // bltcy 视频生成
+  | "toapis"           // toapis Sora2 视频生成
+  | "wan2.6"           // 阿里云万相 Wan2.6 视频生成
   | "custom";
 
 export interface VideoConfigOptions extends BaseConfigOptions {
@@ -355,12 +357,41 @@ export const VIDEO_FORMAT_DEFAULTS: Record<string, Partial<VideoConfigOptions>> 
     statusEndpoint: "/v2/videos/generations/{task_id}",
     authHeader: "Authorization",
     authPrefix: "Bearer ",
-    taskIdPath: "id",
+    taskIdPath: "task_id",
     taskStatusPath: "status",
-    videoUrlPath: "video_url",
+    videoUrlPath: "data.output",
     pollInterval: 5000,
     maxWaitTime: 600000,
     defaultDuration: 10,
+    defaultAspectRatio: "16:9",
+  },
+  toapis: {
+    provider: "toapis",
+    submitEndpoint: "/v1/videos/generations",
+    statusEndpoint: "/v1/videos/generations/{task_id}",
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    taskIdPath: "id",
+    taskStatusPath: "status",
+    videoUrlPath: "result.data[0].url",
+    pollInterval: 10000,  // 建议 10 秒轮询间隔
+    maxWaitTime: 600000,  // 最大等待 10 分钟
+    defaultDuration: 10,
+    defaultAspectRatio: "16:9",
+  },
+  "wan2.6": {
+    provider: "wan2.6",
+    submitEndpoint: "/v1/videos/generations",
+    statusEndpoint: "/v1/videos/generations/{task_id}",
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    taskIdPath: "id",
+    taskStatusPath: "status",
+    videoUrlPath: "result.data[0].url",
+    pollInterval: 10000,  // 10 秒轮询间隔
+    maxWaitTime: 600000,  // 最大等待 10 分钟
+    defaultDuration: 5,
+    defaultResolution: "720p",
     defaultAspectRatio: "16:9",
   },
 };

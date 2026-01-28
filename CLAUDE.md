@@ -118,3 +118,10 @@ docs 根目录不要放单独的文档, 尽量能归类放到文件夹中。
 
 ## 校验结果查看
 pnpm run dev 类似的命令不用执行,  我会自己重启项目后告诉你结果。
+
+
+## 用户认证
+ NextAuth.js 5  不是 4 要注意。  尤其是 client 调用 web 服务的时候。
+ ```
+    const user = await getAuthUser(request);  
+ ```

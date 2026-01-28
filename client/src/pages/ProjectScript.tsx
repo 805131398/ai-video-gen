@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import {
@@ -7,12 +7,23 @@ import {
   createScene,
   deleteScene,
   updateScenesOrder,
+  getVideosGenerationStatus,
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
 import { ProjectScript, ScriptScene, ProjectCharacter } from '../types';
 import CharacterView from '../components/project/CharacterView';
 import TimelineView from '../components/project/TimelineView';
 import DraggableSceneList from '../components/project/DraggableSceneList';
+
+// 视频生成状态类型
+interface VideoStatus {
+  sceneId: string;
+  status: 'pending' | 'generating' | 'completed' | 'failed' | 'no_video';
+  progress: number;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  errorMessage?: string | null;
+}
 
 export default function ProjectScriptPage() {
   const { id, scriptId } = useParams<{ id: string; scriptId: string }>();
@@ -23,6 +34,8 @@ export default function ProjectScriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'scene' | 'character' | 'timeline'>('scene');
+  const [videoStatuses, setVideoStatuses] = useState<Map<string, VideoStatus>>(new Map());
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadData = async () => {
     if (!id || !scriptId) return;
@@ -44,7 +57,55 @@ export default function ProjectScriptPage() {
 
   useEffect(() => {
     loadData();
+    // 启动轮询
+    startPolling();
+    // 清理函数
+    return () => {
+      stopPolling();
+    };
   }, [id, scriptId]);
+
+  // 启动轮询
+  const startPolling = () => {
+    stopPolling(); // 先停止之前的轮询
+    // 立即执行一次
+    pollVideoStatus();
+    // 每 10 秒轮询一次
+    pollingIntervalRef.current = setInterval(() => {
+      pollVideoStatus();
+    }, 10000);
+  };
+
+  // 停止轮询
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+
+  // 轮询视频生成状态
+  const pollVideoStatus = async () => {
+    if (!id || !scriptId) return;
+    try {
+      const statusData = await getVideosGenerationStatus(id, scriptId);
+      const statusMap = new Map<string, VideoStatus>();
+      statusData.scenes.forEach((scene) => {
+        statusMap.set(scene.sceneId, {
+          sceneId: scene.sceneId,
+          status: scene.status,
+          progress: scene.progress,
+          videoUrl: scene.videoUrl,
+          thumbnailUrl: scene.thumbnailUrl,
+          errorMessage: scene.errorMessage,
+        });
+      });
+      setVideoStatuses(statusMap);
+    } catch (err) {
+      // 静默失败，不影响用户体验
+      console.error('Failed to poll video status:', err);
+    }
+  };
 
   const handleAddScene = async () => {
     if (!id || !scriptId) return;
@@ -188,6 +249,7 @@ export default function ProjectScriptPage() {
           <div className="bg-white rounded-xl shadow-sm border-2.5 border-slate-200 p-6">
             <DraggableSceneList
               scenes={scenes}
+              videoStatuses={videoStatuses}
               onScenesReorder={handleScenesReorder}
               onAddScene={handleAddScene}
               onEditScene={handleEditScene}

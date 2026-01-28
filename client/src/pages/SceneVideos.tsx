@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Filter, SortAsc, Play, Check, Trash2, RefreshCw, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, SortAsc, Play, Check, Trash2, RefreshCw, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { getScript, getScriptScenes, getSceneVideos, selectSceneVideo, deleteSceneVideo } from '../services/script';
 import { ProjectScript, ScriptScene, SceneVideo } from '../types';
 import VideoGenerateDialog from '../components/scene-videos/VideoGenerateDialog';
@@ -25,6 +25,7 @@ export default function SceneVideosPage() {
   const [selectingVideoId, setSelectingVideoId] = useState<string | null>(null);
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
 
+  // 初始加载数据
   const loadData = useCallback(async () => {
     if (!id || !scriptId || !sceneId) return;
     try {
@@ -45,21 +46,46 @@ export default function SceneVideosPage() {
     }
   }, [id, scriptId, sceneId]);
 
+  // 静默刷新视频列表（不显示 loading 状态，避免页面闪烁）
+  const refreshVideos = useCallback(async () => {
+    if (!id || !scriptId || !sceneId) return;
+    try {
+      const videosData = await getSceneVideos(id, scriptId, sceneId);
+      setVideos(videosData);
+    } catch (err: any) {
+      // 静默刷新失败时不显示错误
+      console.error('刷新视频列表失败:', err);
+    }
+  }, [id, scriptId, sceneId]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // 轮询更新生成中的视频状态
+  // 轮询更新生成中的视频状态（使用静默刷新）
   useEffect(() => {
     const hasGenerating = videos.some(v => v.status === 'pending' || v.status === 'generating');
     if (!hasGenerating) return;
 
     const interval = setInterval(() => {
-      loadData();
+      refreshVideos();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [videos, loadData]);
+  }, [videos, refreshVideos]);
+
+  // 每秒更新已用时间显示
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const hasGenerating = videos.some(v => v.status === 'pending' || v.status === 'generating');
+    if (!hasGenerating) return;
+
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [videos]);
 
   const handleSelectVideo = async (videoId: string) => {
     if (!id || !scriptId || !sceneId) return;
@@ -110,19 +136,54 @@ export default function SceneVideosPage() {
     setIsGenerateDialogOpen(true);
   };
 
-  const getStatusLabel = (status: string) => {
+  // 计算已用时间
+  const getElapsedTime = (createdAt: string) => {
+    const start = new Date(createdAt).getTime();
+    const now = Date.now();
+    const elapsed = Math.floor((now - start) / 1000); // 秒
+
+    if (elapsed < 60) {
+      return `${elapsed}秒`;
+    } else if (elapsed < 3600) {
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      return `${minutes}分${seconds}秒`;
+    } else {
+      const hours = Math.floor(elapsed / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      return `${hours}时${minutes}分`;
+    }
+  };
+
+  const getStatusLabel = (status: string, errorMessage?: string | null, createdAt?: string) => {
     switch (status) {
       case 'pending':
-        return <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">等待中</span>;
+        return (
+          <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded flex items-center gap-1">
+            等待中
+            {createdAt && <span className="text-gray-400">({getElapsedTime(createdAt)})</span>}
+          </span>
+        );
       case 'generating':
-        return <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-600 rounded flex items-center gap-1">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          生成中
-        </span>;
+        return (
+          <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-600 rounded flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            生成中
+            {createdAt && <span className="text-blue-400">({getElapsedTime(createdAt)})</span>}
+          </span>
+        );
       case 'completed':
         return <span className="px-2 py-0.5 text-xs bg-green-100 text-green-600 rounded">已完成</span>;
       case 'failed':
-        return <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded">失败</span>;
+        return (
+          <span
+            className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded flex items-center gap-1 cursor-help"
+            title={errorMessage || '生成失败'}
+          >
+            <AlertCircle className="w-3 h-3" />
+            失败
+          </span>
+        );
       default:
         return null;
     }
@@ -213,6 +274,11 @@ export default function SceneVideosPage() {
                       className="w-full h-full object-cover"
                       muted
                     />
+                  ) : video.status === 'failed' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                      <AlertCircle className="w-8 h-8 text-red-400 mb-1" />
+                      <span className="text-xs text-red-500">生成失败</span>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       {video.status === 'generating' || video.status === 'pending' ? (
@@ -264,6 +330,25 @@ export default function SceneVideosPage() {
                         </button>
                       </>
                     )}
+                    {/* 失败状态：显示查看详情和重新生成按钮 */}
+                    {video.status === 'failed' && (
+                      <>
+                        <button
+                          onClick={() => handleViewDetail(video)}
+                          className="p-2 bg-white rounded-full hover:bg-slate-100 transition-colors"
+                          title="查看详情"
+                        >
+                          <Eye className="w-4 h-4 text-slate-700" />
+                        </button>
+                        <button
+                          onClick={() => handleRegenerate(video)}
+                          className="p-2 bg-white rounded-full hover:bg-slate-100 transition-colors"
+                          title="重新生成"
+                        >
+                          <RefreshCw className="w-4 h-4 text-slate-700" />
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => handleDeleteVideo(video.id)}
                       disabled={deletingVideoId === video.id}
@@ -285,9 +370,18 @@ export default function SceneVideosPage() {
                     {video.isSelected && (
                       <span className="text-xs text-green-600 font-medium">✓ 已选中</span>
                     )}
-                    {getStatusLabel(video.status)}
+                    {getStatusLabel(video.status, video.errorMessage, video.createdAt)}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  {/* 失败原因显示 */}
+                  {video.status === 'failed' && video.errorMessage && (
+                    <p
+                      className="text-xs text-red-500 mt-1 line-clamp-2 cursor-help"
+                      title={video.errorMessage}
+                    >
+                      {video.errorMessage}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                     {video.duration && <span>{video.duration}s</span>}
                     <span>•</span>
                     <span>{new Date(video.createdAt).toLocaleString('zh-CN', {

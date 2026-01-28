@@ -16,18 +16,29 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Edit, Trash2, Video } from 'lucide-react';
+import { Plus, GripVertical, Edit, Trash2, Video, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { ScriptScene } from '../../types';
+
+// 视频生成状态类型
+interface VideoStatus {
+  sceneId: string;
+  status: 'pending' | 'generating' | 'completed' | 'failed' | 'no_video';
+  progress: number;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  errorMessage?: string | null;
+}
 
 interface DraggableSceneCardProps {
   scene: ScriptScene;
   index: number;
+  videoStatus?: VideoStatus;
   onEdit: () => void;
   onDelete: () => void;
   onGenerateVideo: () => void;
 }
 
-function DraggableSceneCard({ scene, index, onEdit, onDelete, onGenerateVideo }: DraggableSceneCardProps) {
+function DraggableSceneCard({ scene, index, videoStatus, onEdit, onDelete, onGenerateVideo }: DraggableSceneCardProps) {
   const {
     attributes,
     listeners,
@@ -41,6 +52,62 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete, onGenerateVideo }:
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  // 获取状态显示信息
+  const getStatusDisplay = () => {
+    if (!videoStatus || videoStatus.status === 'no_video') {
+      return null;
+    }
+
+    switch (videoStatus.status) {
+      case 'pending':
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+            <Clock className="w-3 h-3" />
+            <span>排队中</span>
+          </div>
+        );
+      case 'generating':
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>生成中 {videoStatus.progress}%</span>
+            </div>
+            {/* 进度条 */}
+            <div className="w-full bg-slate-200 rounded-full h-1.5">
+              <div
+                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${videoStatus.progress}%` }}
+              />
+            </div>
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+            <CheckCircle2 className="w-3 h-3" />
+            <span>已完成</span>
+          </div>
+        );
+      case 'failed':
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+              <XCircle className="w-3 h-3" />
+              <span>生成失败</span>
+            </div>
+            {videoStatus.errorMessage && (
+              <p className="text-xs text-red-500 truncate" title={videoStatus.errorMessage}>
+                {videoStatus.errorMessage}
+              </p>
+            )}
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -75,6 +142,14 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete, onGenerateVideo }:
       {scene.duration && (
         <p className="text-xs text-slate-500 mb-2">⏱ {scene.duration}s</p>
       )}
+
+      {/* 视频生成状态 */}
+      {getStatusDisplay() && (
+        <div className="mb-3">
+          {getStatusDisplay()}
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           onClick={(e) => {
@@ -103,6 +178,7 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete, onGenerateVideo }:
 
 interface DraggableSceneListProps {
   scenes: ScriptScene[];
+  videoStatuses: Map<string, VideoStatus>;
   onScenesReorder: (scenes: ScriptScene[]) => void;
   onAddScene: () => void;
   onEditScene: (scene: ScriptScene) => void;
@@ -112,6 +188,7 @@ interface DraggableSceneListProps {
 
 export default function DraggableSceneList({
   scenes,
+  videoStatuses,
   onScenesReorder,
   onAddScene,
   onEditScene,
@@ -152,6 +229,7 @@ export default function DraggableSceneList({
               key={scene.id}
               scene={scene}
               index={index}
+              videoStatus={videoStatuses.get(scene.id)}
               onEdit={() => onEditScene(scene)}
               onDelete={() => onDeleteScene(scene.id)}
               onGenerateVideo={() => onGenerateVideo(scene.id)}

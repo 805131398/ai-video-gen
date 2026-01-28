@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Sparkles, Video } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Video, Info } from 'lucide-react';
 import { getProject, getProjectCharacters } from '../services/project';
 import {
   getScript,
@@ -40,6 +40,7 @@ export default function ScriptEditor() {
   const [generatingScenes, setGeneratingScenes] = useState(false);
   const [error, setError] = useState('');
   const [sceneCount, setSceneCount] = useState(5);
+  const [useStoryboard, setUseStoryboard] = useState(false); // 是否使用故事板模式
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -234,11 +235,12 @@ export default function ScriptEditor() {
       // 调用生成视频 API
       const result = await generateScriptVideos(id!, scriptId, {
         promptType: 'smart_combine', // 默认使用智能组合方式
+        mode: useStoryboard ? 'storyboard' : 'individual', // 根据用户选择的模式
       });
 
       // 显示成功消息
-      alert(`视频生成任务已提交！\n任务 ID: ${result.taskId}\n${result.message}\n\n视频将在后台生成，请返回剧本列表查看进度。`);
-
+      const modeText = useStoryboard ? '故事板模式' : '单独生成模式';
+      alert(`视频生成任务已提交！\n模式: ${modeText}\n任务 ID: ${result.taskId}\n${result.message}\n\n视频将在后台生成，请返回剧本列表查看进度。`);
       // 返回剧本列表页
       navigate(`/projects/${id}/scripts`);
     } catch (err: any) {
@@ -279,6 +281,36 @@ export default function ScriptEditor() {
             >
               取消
             </button>
+
+            {/* 故事板模式选项 */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useStoryboard}
+                  onChange={(e) => setUseStoryboard(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                />
+                <span className="text-sm text-slate-700">故事板模式</span>
+              </label>
+              <div className="group relative">
+                <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                <div className="absolute bottom-full right-0 mb-2 w-72 p-3 bg-slate-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="space-y-2">
+                    <div>
+                      <strong className="text-purple-300">✓ 故事板模式：</strong>
+                      <p className="mt-1">一次性生成包含所有场景的完整视频，场景之间转场更流畅，视频整体更连贯。适合场景数量少（≤5个）且总时长≤25秒的情况。</p>
+                    </div>
+                    <div>
+                      <strong className="text-blue-300">✓ 单独生成模式：</strong>
+                      <p className="mt-1">为每个场景单独生成视频。有角色形象时自动使用图生视频方式，无角色形象时使用纯文生视频。可以独立调整每个场景，失败不影响其他场景。</p>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-0 right-4 transform translate-y-1/2 rotate-45 w-2 h-2 bg-slate-900"></div>
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={handleGenerateVideos}
               disabled={!scriptId || formData.scenes.length === 0}

@@ -31,12 +31,11 @@ export default function VideoGenerateDialog({
   onSuccess,
 }: VideoGenerateDialogProps) {
   const [promptType, setPromptType] = useState<'smart_combine' | 'ai_optimized'>(
-    (defaultValues?.promptType as 'smart_combine' | 'ai_optimized') || 'smart_combine'
+    (defaultValues?.promptType as 'smart_combine' | 'ai_optimized') || 'ai_optimized'
   );
   const [useStoryboard, setUseStoryboard] = useState(defaultValues?.useStoryboard ?? false);
   const [useCharacterImage, setUseCharacterImage] = useState(defaultValues?.useCharacterImage ?? true);
   const [aspectRatio, setAspectRatio] = useState(defaultValues?.aspectRatio || '16:9');
-  const [hd, setHd] = useState(defaultValues?.hd ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -49,7 +48,6 @@ export default function VideoGenerateDialog({
         useStoryboard,
         useCharacterImage,
         aspectRatio,
-        hd,
       });
       onSuccess();
     } catch (err: any) {
@@ -138,15 +136,6 @@ export default function VideoGenerateDialog({
               />
               <span className="text-sm text-slate-700">使用角色形象作为参考图</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hd}
-                onChange={(e) => setHd(e.target.checked)}
-                className="w-4 h-4 text-purple-600 rounded"
-              />
-              <span className="text-sm text-slate-700">高清模式 (HD)</span>
-            </label>
           </div>
 
           {/* 宽高比 */}
@@ -158,6 +147,7 @@ export default function VideoGenerateDialog({
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              disabled={useCharacterImage}
             >
               <option value="16:9">16:9 (横屏)</option>
               <option value="9:16">9:16 (竖屏)</option>
@@ -165,6 +155,11 @@ export default function VideoGenerateDialog({
               <option value="4:3">4:3</option>
               <option value="3:4">3:4</option>
             </select>
+            {useCharacterImage && (
+              <p className="text-xs text-purple-600 mt-1">
+                已启用角色形象，宽高比将自动匹配数字人图片
+              </p>
+            )}
           </div>
 
           {/* 时长显示 */}
@@ -173,7 +168,15 @@ export default function VideoGenerateDialog({
               时长
             </label>
             <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
-              {scene.duration || 5}s (继承场景设置)
+              <div className="flex items-center justify-between">
+                <span>{scene.duration || 10}s (继承场景设置)</span>
+                <span className="text-purple-600 font-medium">
+                  → {(scene.duration || 10) <= 12 ? '10s' : '15s'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Sora 仅支持 10s 和 15s，系统将自动选择最接近的时长
+              </p>
             </div>
           </div>
         </div>

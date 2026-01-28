@@ -60,7 +60,7 @@ export async function GET(
         sceneId: scene.id,
         sceneTitle: scene.title,
         status: latestVideo?.status || "no_video",
-        progress: calculateProgress(latestVideo?.status),
+        progress: latestVideo?.progress ?? calculateProgress(latestVideo?.status), // 优先使用真实进度
         videoUrl: latestVideo?.videoUrl || null,
         thumbnailUrl: latestVideo?.thumbnailUrl || null,
         duration: latestVideo?.duration || null,

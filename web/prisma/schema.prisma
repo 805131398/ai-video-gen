@@ -813,6 +813,7 @@ model SceneVideo {
   prompt        String   @db.Text // 使用的 prompt
   promptType    String   @map("prompt_type") // "smart_combine" 或 "ai_optimized"
   status        String   @default("pending") // "pending", "generating", "completed", "failed"
+  progress      Int      @default(0) // 生成进度 (0-100)
   taskId        String?  @map("task_id") // AI 服务返回的任务 ID
   errorMessage  String?  @map("error_message") @db.Text // 失败时的错误信息
   metadata      Json?    // 其他元数据（分辨率、格式等）
