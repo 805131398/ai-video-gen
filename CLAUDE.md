@@ -90,3 +90,31 @@ TOPIC_INPUT → TITLE_GENERATE → TITLE_SELECT → ATTRIBUTE_SET → COPY_GENER
 
 ## Prisma 相关
 Prisma 7 的客户端结构不同，需要从具体文件导入
+
+## 文档编辑
+基本内容修复或者完善新功能后,可以总结本次修复然后保存到 docs 中。
+文档命名尽量使用中文好理解。
+docs 根目录不要放单独的文档, 尽量能归类放到文件夹中。
+
+## 工具的使用
+### UI 相关的尽量使用
+    : 使用 /ui-ux-pro-max   作为 UI 顾问
+### 开发或者修改 bug
+尽可能调用,不是强制, 只要你觉得这个能方便我们开发即可调用 
+|                                |                      |
+| ------------------------------ | -------------------- |
+| 技能                             | 用途                   |
+| brainstorming                  | 在创建功能、构建组件前探索需求和设计   |
+| writing-plans                  | 为多步骤任务编写实施计划         |
+| executing-plans                | 执行已有的实施计划            |
+| test-driven-development        | 测试驱动开发               |
+| systematic-debugging           | 系统性调试 bug            |
+| requesting-code-review         | 请求代码审查               |
+| receiving-code-review          | 处理收到的代码审查反馈          |
+| verification-before-completion | 完成前验证                |
+| using-git-worktrees            | 使用 git worktree 隔离开发 |
+| writing-skills                 | 创建或编辑新技能             |
+
+
+## 校验结果查看
+pnpm run dev 类似的命令不用执行,  我会自己重启项目后告诉你结果。

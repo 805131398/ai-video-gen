@@ -9,11 +9,16 @@ const database_1 = require("./database");
 let mainWindow = null;
 const isDev = process.env.NODE_ENV === 'development';
 function createWindow() {
+    // 设置图标路径
+    const iconPath = isDev
+        ? path_1.default.join(__dirname, '../build/icon.png')
+        : path_1.default.join(__dirname, '../build/icon.png');
     mainWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
         minWidth: 800,
         minHeight: 600,
+        icon: iconPath,
         webPreferences: {
             preload: path_1.default.join(__dirname, 'preload.js'),
             nodeIntegration: false,

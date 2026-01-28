@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-middleware';
 import { activateCode } from '@/lib/services/activation-service';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
     }
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '卡密格式错误' }, { status: 400 });
     }
 
-    const result = await activateCode(session.user.id, code.trim());
+    const result = await activateCode(user.id, code.trim());
 
     return NextResponse.json({
       success: true,

@@ -6,8 +6,8 @@ import { useAuthStore } from '../store/auth';
 export default function Login() {
   const navigate = useNavigate();
   const { login: setAuth } = useAuthStore();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('qwer@qq.com');
+  const [password, setPassword] = useState('qwer1234');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

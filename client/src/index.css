@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+@import "./styles/fonts.css";
 
 @theme {
   /* SaaS 专业配色方案 */
@@ -15,8 +15,8 @@
   --color-success: #10B981;
 
   /* 字体 */
-  --font-heading: 'Poppins', 'Noto Sans SC', sans-serif;
-  --font-body: 'Noto Sans SC', system-ui, sans-serif;
+  --font-heading: 'Poppins', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'Open Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   /* 圆角 */
   --radius: 0.5rem;
