@@ -35,8 +35,8 @@ export default function Register() {
       localStorage.setItem('access_token', tokens.access_token);
       localStorage.setItem('refresh_token', tokens.refresh_token);
 
-      // 跳转到激活页面
-      navigate('/activate');
+      // 跳转到首页
+      navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || '注册失败，请稍后重试');
     } finally {
