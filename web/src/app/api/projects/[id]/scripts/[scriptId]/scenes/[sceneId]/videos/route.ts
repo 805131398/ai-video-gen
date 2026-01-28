@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-middleware';
 
 // GET /api/projects/[id]/scripts/[scriptId]/scenes/[sceneId]/videos
 // 获取场景的所有历史视频
@@ -9,8 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string; scriptId: string; sceneId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
 
@@ -22,7 +22,7 @@ export async function GET(
         id: scriptId,
         projectId,
         project: {
-          userId: session.user.id,
+          userId: user.id,
         },
       },
     });
