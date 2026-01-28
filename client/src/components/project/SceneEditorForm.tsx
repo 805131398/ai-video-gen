@@ -49,11 +49,11 @@ export default function SceneEditorForm({
             场景描述
           </label>
           <textarea
-            value={formData.content.description || ''}
+            value={formData.content?.description || ''}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                content: { ...formData.content, description: e.target.value },
+                content: { ...(formData.content || {}), description: e.target.value },
               })
             }
             rows={3}
@@ -67,12 +67,12 @@ export default function SceneEditorForm({
               场景类型
             </label>
             <select
-              value={formData.content.sceneType || 'indoor'}
+              value={formData.content?.sceneType || 'indoor'}
               onChange={(e) =>
                 setFormData({
                   ...formData,
                   content: {
-                    ...formData.content,
+                    ...(formData.content || {}),
                     sceneType: e.target.value as 'indoor' | 'outdoor' | 'special',
                   },
                 })
