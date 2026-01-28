@@ -1,24 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(9% 0.03 285.88);
+
+  --radius: 0.5rem;
+}
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-  }
-
   * {
-    border-color: hsl(var(--foreground) / 0.1);
+    border-color: oklch(from var(--color-foreground) l c h / 0.1);
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: oklch(9% 0.03 285.88);
+    --color-foreground: oklch(98% 0 0);
   }
 }
