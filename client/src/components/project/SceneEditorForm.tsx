@@ -27,7 +27,84 @@ export default function SceneEditorForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 表单内容将在后续步骤添加 */}
+      {/* 基本信息 */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">基本信息</h3>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            场景标题 *
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            场景描述
+          </label>
+          <textarea
+            value={formData.content.description || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: { ...formData.content, description: e.target.value },
+              })
+            }
+            rows={3}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              场景类型
+            </label>
+            <select
+              value={formData.content.sceneType || 'indoor'}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  content: {
+                    ...formData.content,
+                    sceneType: e.target.value as 'indoor' | 'outdoor' | 'special',
+                  },
+                })
+              }
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="indoor">室内</option>
+              <option value="outdoor">室外</option>
+              <option value="special">特殊场景</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              预计时长（秒）
+            </label>
+            <input
+              type="number"
+              value={formData.duration || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  duration: e.target.value ? parseInt(e.target.value) : null,
+                })
+              }
+              min="1"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-3">
         <button
           type="button"
