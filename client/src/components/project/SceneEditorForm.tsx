@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScriptScene, SceneContent, ProjectCharacter } from '../../types';
+import { ScriptScene, ProjectCharacter } from '../../types';
 
 interface SceneEditorFormProps {
   scene: ScriptScene;
