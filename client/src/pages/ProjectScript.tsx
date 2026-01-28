@@ -11,6 +11,8 @@ import {
 import { getProjectCharacters } from '../services/project';
 import { ProjectScript, ScriptScene, SceneContent, ProjectCharacter } from '../types';
 import SceneEditorForm from '../components/project/SceneEditorForm';
+import CharacterView from '../components/project/CharacterView';
+import TimelineView from '../components/project/TimelineView';
 
 export default function ProjectScriptPage() {
   const { id, scriptId } = useParams<{ id: string; scriptId: string }>();
@@ -148,22 +150,20 @@ export default function ProjectScriptPage() {
               className={`px-6 py-3 font-medium transition-colors ${
                 activeTab === 'character'
                   ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-400 cursor-not-allowed'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
-              disabled
             >
-              角色视图 (即将推出)
+              角色视图
             </button>
             <button
               onClick={() => setActiveTab('timeline')}
               className={`px-6 py-3 font-medium transition-colors ${
                 activeTab === 'timeline'
                   ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-400 cursor-not-allowed'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
-              disabled
             >
-              时间轴视图 (即将推出)
+              时间轴视图
             </button>
           </div>
         </div>
@@ -207,6 +207,23 @@ export default function ProjectScriptPage() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* 角色视图 */}
+        {activeTab === 'character' && (
+          <CharacterView
+            scenes={scenes}
+            characters={characters}
+            onEditScene={handleEditScene}
+          />
+        )}
+
+        {/* 时间轴视图 */}
+        {activeTab === 'timeline' && (
+          <TimelineView
+            scenes={scenes}
+            onEditScene={handleEditScene}
+          />
         )}
 
         {/* 场景编辑器 (抽屉) */}
