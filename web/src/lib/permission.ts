@@ -100,3 +100,27 @@ export async function getCurrentUserWithPermissions() {
     permissions,
   };
 }
+
+// 检查用户是否为超级管理员
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  const userRoles = await prisma.userRole.findMany({
+    where: { userId },
+    include: {
+      role: true,
+    },
+  });
+
+  return userRoles.some(
+    (userRole) => userRole.role.code === "super_admin" && userRole.role.isActive
+  );
+}
+
+// 检查当前用户是否为超级管理员
+export async function checkSuperAdmin(): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return false;
+  }
+
+  return isSuperAdmin(session.user.id);
+}
