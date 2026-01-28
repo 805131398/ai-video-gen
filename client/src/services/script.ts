@@ -51,6 +51,16 @@ export const getScriptScenes = async (projectId: string, scriptId: string): Prom
   return response.data.data;
 };
 
+// 获取单个场景详情
+export const getScene = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string
+): Promise<ScriptScene> => {
+  const response = await api.get(`/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}`);
+  return response.data.data;
+};
+
 // 创建场景
 export const createScene = async (
   projectId: string,

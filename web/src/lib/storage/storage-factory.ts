@@ -129,4 +129,43 @@ export class StorageFactory {
   static getProviderType(): StorageProviderType | null {
     return this.config?.type || null;
   }
+
+  /**
+   * 从数据库加载默认存储配置并初始化
+   */
+  static async initializeFromDatabase(tenantId?: string): Promise<void> {
+    const { prisma } = await import('@/lib/prisma');
+
+    const provider = await prisma.storageProvider.findFirst({
+      where: {
+        tenantId,
+        isDefault: true,
+        isActive: true,
+      },
+    });
+
+    if (!provider) {
+      throw new Error('No default storage provider found');
+    }
+
+    const config: StorageProviderConfig = {
+      type: provider.providerCode as StorageProviderType,
+      config: provider.config as StorageConfig,
+    };
+
+    this.initialize(config);
+  }
+
+  /**
+   * 从数据库或环境变量加载配置并初始化
+   * 优先使用数据库配置，如果没有则使用环境变量
+   */
+  static async initializeFromDatabaseOrEnv(tenantId?: string): Promise<void> {
+    try {
+      await this.initializeFromDatabase(tenantId);
+    } catch (error) {
+      console.warn('Failed to load storage config from database, falling back to env:', error);
+      this.initializeFromEnv();
+    }
+  }
 }

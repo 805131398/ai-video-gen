@@ -33,6 +33,25 @@ export interface ChatCompletionResponse {
   raw?: unknown;
 }
 
+export interface ImageGenerationRequest {
+  prompt: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+  samples?: number;
+  steps?: number;
+  cfgScale?: number;
+}
+
+export interface ImageGenerationResponse {
+  url: string;
+  base64?: string;
+  usage?: {
+    totalTokens?: number;
+  };
+  raw?: unknown;
+}
+
 /**
  * 从对象中按路径获取值
  * 支持 "a.b.c" 和 "a[0].b" 格式
@@ -164,7 +183,18 @@ export class AIClient {
    * 解析响应
    */
   private parseResponse(data: unknown): ChatCompletionResponse {
+    console.log("[AIClient.parseResponse] 开始解析响应:", {
+      responsePath: this.config.responsePath,
+      dataKeys: data && typeof data === 'object' ? Object.keys(data) : 'not an object',
+      dataPreview: JSON.stringify(data).substring(0, 500),
+    });
+
     const content = getByPath(data, this.config.responsePath) as string || "";
+
+    console.log("[AIClient.parseResponse] 解析结果:", {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 200),
+    });
 
     // 尝试解析 usage 信息
     const usage = getByPath(data, "usage") as Record<string, number> | undefined;
@@ -215,7 +245,8 @@ export class AIClient {
       status: response.status,
       statusText: response.statusText,
       contentType: response.headers.get("content-type"),
-      responsePreview: responseText.substring(0, 200),
+      responsePreview: responseText.substring(0, 500),
+      responseLength: responseText.length,
     });
 
     if (!response.ok) {
@@ -280,6 +311,103 @@ export class AIClient {
     });
 
     return response.content;
+  }
+
+  /**
+   * 图像生成方法
+   * 注意：此方法需要配置支持图像生成的 AI 服务
+   */
+  async generateImage(
+    prompt: string,
+    options?: Partial<ImageGenerationRequest>
+  ): Promise<ImageGenerationResponse> {
+    const {
+      negativePrompt,
+      width = 512,
+      height = 768,
+      samples = 1,
+      steps = 30,
+      cfgScale = 7,
+    } = options || {};
+
+    // 构建请求体（适配不同的图像生成 API）
+    const body: Record<string, unknown> = {
+      model: this.modelName,
+      prompt,
+      negative_prompt: negativePrompt,
+      width,
+      height,
+      samples,
+      steps,
+      cfg_scale: cfgScale,
+    };
+
+    console.log("[AIClient.generateImage] 发送图像生成请求:", {
+      url: this.apiUrl,
+      promptPreview: prompt.substring(0, 100) + "...",
+      width,
+      height,
+    });
+
+    const response = await fetch(this.apiUrl, {
+      method: "POST",
+      headers: this.buildHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      let errorMessage = `AI Image API error: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(responseText);
+        errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+      } catch {
+        errorMessage = `${errorMessage} - ${responseText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    try {
+      const data = JSON.parse(responseText);
+
+      // 尝试从不同的响应格式中提取图片 URL
+      let imageUrl = "";
+
+      // Stable Diffusion API 格式
+      if (data.artifacts && Array.isArray(data.artifacts) && data.artifacts.length > 0) {
+        const artifact = data.artifacts[0];
+        if (artifact.base64) {
+          imageUrl = `data:image/png;base64,${artifact.base64}`;
+        } else if (artifact.url) {
+          imageUrl = artifact.url;
+        }
+      }
+      // DALL-E API 格式
+      else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+        imageUrl = data.data[0].url || data.data[0].b64_json;
+      }
+      // 通用格式
+      else if (data.url) {
+        imageUrl = data.url;
+      } else if (data.image_url) {
+        imageUrl = data.image_url;
+      }
+
+      if (!imageUrl) {
+        throw new Error("无法从响应中提取图片 URL");
+      }
+
+      return {
+        url: imageUrl,
+        raw: data,
+      };
+    } catch (error) {
+      console.error("[AIClient.generateImage] 解析失败:", error);
+      throw new Error(
+        `AI Image API 返回格式错误: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 }
 

@@ -573,6 +573,7 @@ model Project {
   versions   ProjectVersion[]
   aiLogs     AIUsageLog[]
   characters ProjectCharacter[]
+  scripts    ProjectScript[]
 
   @@map("projects")
 }
@@ -724,15 +725,74 @@ model ProjectCharacter {
   projectId   String   @map("project_id")
   name        String   // 角色名称
   description String   @db.Text // 角色描述（用于生成时保持一致性）
-  avatarUrl   String?  @map("avatar_url") // 角色头像
+  avatarUrl   String?  @map("avatar_url") // 角色参考图
   attributes  Json?    // 角色属性（年龄、性别、外貌特征等）
   sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  digitalHumans DigitalHuman[]
+  scripts       ProjectScript[]
 
   @@map("project_characters")
+}
+
+// 数字人形象表
+model DigitalHuman {
+  id          String   @id @default(uuid())
+  characterId String   @map("character_id")
+  imageUrl    String   @map("image_url") // 数字人图片URL
+  prompt      String   @db.Text // 生成提示词
+  isSelected  Boolean  @default(false) @map("is_selected") // 是否被选中
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  character ProjectCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([characterId, isSelected])
+  @@map("digital_humans")
+}
+
+// 项目剧本表
+model ProjectScript {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  characterId String   @map("character_id")
+  title       String   // 剧本标题
+  description String?  @db.Text // 剧本描述
+  version     Int      @default(1) // 版本号
+  isActive    Boolean  @default(true) @map("is_active") // 是否为当前版本
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character ProjectCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  scenes    ScriptScene[]
+
+  @@index([projectId])
+  @@index([characterId])
+  @@index([projectId, characterId])
+  @@map("project_scripts")
+}
+
+// 剧本场景表
+model ScriptScene {
+  id        String   @id @default(uuid())
+  scriptId  String   @map("script_id")
+  title     String   // 场景标题
+  sortOrder Int      @default(0) @map("sort_order") // 场景顺序
+  duration  Int?     // 预计时长（秒）
+  content   Json     // 详细内容（台词、动作、镜头等）
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  script ProjectScript @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@index([scriptId])
+  @@index([scriptId, sortOrder])
+  @@map("script_scenes")
 }
 
 // ==================== 卡密激活模型 ====================

@@ -7,6 +7,9 @@ import Dashboard from './pages/Dashboard';
 import ProjectManagement from './pages/ProjectManagement';
 import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
+import ProjectScripts from './pages/ProjectScripts';
+import ProjectScript from './pages/ProjectScript';
+import SceneEdit from './pages/SceneEdit';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
 import { getUserProfile, getSubscriptionStatus } from './services/auth';
@@ -58,12 +61,15 @@ function App() {
             path="/"
             element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}
           >
-            <Route index element={<Navigate to="/dashboard" />} />
+            <Route index element={<Navigate to="/projects" />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="projects" element={<ProjectManagement />} />
             <Route path="projects/new" element={<ProjectNew />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
-            <Route path="activate" element={<Navigate to="/dashboard" />} />
+            <Route path="projects/:id/scripts" element={<ProjectScripts />} />
+            <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
+            <Route path="projects/:id/scripts/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
+            <Route path="activate" element={<Navigate to="/projects" />} />
           </Route>
         </Routes>
       </BrowserRouter>

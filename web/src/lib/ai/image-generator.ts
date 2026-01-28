@@ -97,7 +97,7 @@ async function callBltcyImageAPI(
   }
 ): Promise<{ url: string; revised_prompt?: string }[]> {
   console.log("[callBltcyImageAPI] bltcy 请求 URL:", apiUrl);
-  console.log("[callBltcyImageAPI] 模型:", modelName, "数量:", options.n || 1);
+  console.log("[callBltcyImageAPI] 模型:", modelName, "数量:", options.n || 1, "尺寸:", options.size || "1024x1024");
 
   const results: { url: string; revised_prompt?: string }[] = [];
   const count = options.n || 1;
@@ -128,6 +128,8 @@ async function callBltcyImageAPI(
               content: prompt,
             },
           ],
+          // 添加图片尺寸参数
+          size: options.size || "1024x1024",
         }),
         signal: controller.signal,
       });

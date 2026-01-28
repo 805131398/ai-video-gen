@@ -1,0 +1,55 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Sparkles, RefreshCw, Check } from 'lucide-react';
+import {
+  getProject,
+  getProjectCharacters,
+  createCharacter,
+  updateCharacter,
+  deleteCharacter,
+  generateCharacters,
+} from '../services/project';
+import { Project, ProjectCharacter, CreateCharacterRequest } from '../types';
+import CharacterCard from '../components/project/CharacterCard';
+import CharacterForm from '../components/project/CharacterForm';
+
+export default function ProjectDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [project, setProject] = useState<Project | null>(null);
+  const [characters, setCharacters] = useState<ProjectCharacter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState<ProjectCharacter | undefined>();
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiCharacters, setAiCharacters] = useState<Array<{ name: string; description: string; attributes?: Record<string, unknown>; selected: boolean }>>([]);
+  const [showAiResults, setShowAiResults] = useState(false);
+
+  useEffect(() => { loadData(); }, [id]);
+
+  const loadData = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const [projectData, charactersData] = await Promise.all([getProject(id), getProjectCharacters(id)]);
+      setProject(projectData);
+      setCharacters(charactersData);
+    } catch (err: any) {
+      setError(err.response?.data?.message || '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCharacter = () => { setEditingCharacter(undefined); setShowForm(true); setShowAiResults(false); };
+  const handleEditCharacter = (character: ProjectCharacter) => { setEditingCharacter(character); setShowForm(true); setShowAiResults(false); };
+  const handleSubmitCharacter = async (data: CreateCharacterRequest) => {
+    if (!id) return;
+    if (editingCharacter) { await updateCharacter(id, editingCharacter.id, data); } else { await createCharacter(id, data); }
+    setShowForm(false); setEditingCharacter(undefined); await loadData();
+  };
+  const handleDeleteCharacter = async (characterId: string) => {
+    if (!id || !confirm('确定要删除这个角色吗？')) return;
+    try { await deleteCharacter(id, characterId); await loadData(); } catch (err: any) { alert(err.response?.data?.message || '删除失败'); }
+  };

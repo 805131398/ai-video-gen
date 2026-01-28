@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -12,8 +12,8 @@ export async function GET(
   context: RouteContext
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -40,8 +40,8 @@ export async function PUT(
   context: RouteContext
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -73,8 +73,8 @@ export async function DELETE(
   context: RouteContext
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 

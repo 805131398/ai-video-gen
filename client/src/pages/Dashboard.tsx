@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Plus } from 'lucide-react';
 import { activateCode, getActivationHistory, getSubscriptionStatus } from '../services/auth';
 import { useAuthStore } from '../store/auth';
 import { ActivationRecord } from '../types';
@@ -68,13 +68,22 @@ export default function Dashboard() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">个人中心</h1>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-          退出登录
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate('/projects/new')}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            创建新项目
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            退出登录
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

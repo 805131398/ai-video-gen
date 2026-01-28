@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/project-themes - 获取项目主题列表
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
 // POST /api/project-themes - 创建项目主题
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 

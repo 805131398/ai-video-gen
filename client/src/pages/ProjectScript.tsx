@@ -5,13 +5,11 @@ import {
   getScript,
   getScriptScenes,
   createScene,
-  updateScene,
   deleteScene,
   updateScenesOrder,
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
-import { ProjectScript, ScriptScene, SceneContent, ProjectCharacter } from '../types';
-import SceneEditorForm from '../components/project/SceneEditorForm';
+import { ProjectScript, ScriptScene, ProjectCharacter } from '../types';
 import CharacterView from '../components/project/CharacterView';
 import TimelineView from '../components/project/TimelineView';
 import DraggableSceneList from '../components/project/DraggableSceneList';
@@ -25,8 +23,6 @@ export default function ProjectScriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'scene' | 'character' | 'timeline'>('scene');
-  const [editingScene, setEditingScene] = useState<ScriptScene | null>(null);
-  const [showSceneEditor, setShowSceneEditor] = useState(false);
 
   const loadData = async () => {
     if (!id || !scriptId) return;
@@ -63,20 +59,12 @@ export default function ProjectScriptPage() {
   };
 
   const handleEditScene = (scene: ScriptScene) => {
-    setEditingScene(scene);
-    setShowSceneEditor(true);
+    // 跳转到场景编辑页面
+    navigate(`/projects/${id}/scripts/${scriptId}/scenes/${scene.id}/edit`);
   };
 
   const handleSaveScene = async (sceneData: Partial<ScriptScene>) => {
-    if (!id || !scriptId || !editingScene) return;
-    try {
-      const updated = await updateScene(id, scriptId, editingScene.id, sceneData);
-      setScenes(scenes.map((s) => (s.id === updated.id ? updated : s)));
-      setShowSceneEditor(false);
-      setEditingScene(null);
-    } catch (err: any) {
-      setError(err.response?.data?.error || '保存场景失败');
-    }
+    // 此方法已废弃，编辑功能已移至独立页面
   };
 
   const handleDeleteScene = async (sceneId: string) => {
@@ -218,23 +206,6 @@ export default function ProjectScriptPage() {
             scenes={scenes}
             onEditScene={handleEditScene}
           />
-        )}
-
-        {/* 场景编辑器 (抽屉) */}
-        {showSceneEditor && editingScene && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-              <SceneEditorForm
-                scene={editingScene}
-                characters={characters}
-                onSave={handleSaveScene}
-                onCancel={() => {
-                  setShowSceneEditor(false);
-                  setEditingScene(null);
-                }}
-              />
-            </div>
-          </div>
         )}
       </div>
     </div>

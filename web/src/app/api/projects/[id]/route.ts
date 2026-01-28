@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { StepType } from "@/generated/prisma/enums";
 import type { ProjectPageResponse, TitleOption, CopyOption, ImageOption, VideoOption, CopywritingAttributes, VoiceConfigData } from "@/types/ai-video";
@@ -72,8 +72,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -82,7 +82,7 @@ export async function GET(
     const project = await prisma.project.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
       include: {
         theme: true,
@@ -179,8 +179,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -189,7 +189,7 @@ export async function PUT(
 
     // 验证作品归属
     const existing = await prisma.project.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: user.id },
     });
 
     if (!existing) {
@@ -224,8 +224,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -233,7 +233,7 @@ export async function DELETE(
 
     // 验证作品归属
     const existing = await prisma.project.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: user.id },
     });
 
     if (!existing) {

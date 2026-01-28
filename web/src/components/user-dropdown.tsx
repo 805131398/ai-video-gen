@@ -24,7 +24,11 @@ export function UserDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+        <Button
+          id="user-dropdown-trigger"
+          variant="ghost"
+          className="relative h-9 w-9 rounded-full"
+        >
           <Avatar className="h-9 w-9">
             <AvatarImage src={user?.image || ""} alt={user?.name || "用户"} />
             <AvatarFallback className="bg-blue-100 text-blue-600">
