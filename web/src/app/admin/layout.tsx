@@ -72,6 +72,12 @@ const staticMenuItems: MenuItem[] = [
         icon: "Cog",
         href: "/admin/configs",
       },
+      {
+        id: "card-keys",
+        label: "卡密管理",
+        icon: "Key",
+        href: "/admin/card-keys",
+      },
     ],
   },
 ];
