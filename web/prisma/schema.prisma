@@ -731,9 +731,10 @@ model ProjectCharacter {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  digitalHumans DigitalHuman[]
-  scripts       ProjectScript[]
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  digitalHumans    DigitalHuman[]
+  scripts          ProjectScript[]
+  scriptCharacters ScriptCharacter[] // 新增关联
 
   @@map("project_characters")
 }
@@ -759,17 +760,22 @@ model DigitalHuman {
 model ProjectScript {
   id          String   @id @default(uuid())
   projectId   String   @map("project_id")
-  characterId String   @map("character_id")
+  characterId String?  @map("character_id") // 保留用于向后兼容
   title       String   // 剧本标题
   description String?  @db.Text // 剧本描述
   version     Int      @default(1) // 版本号
   isActive    Boolean  @default(true) @map("is_active") // 是否为当前版本
+  // 新增字段
+  name        String?  // 剧本名称（必填，最大 50 字符）
+  tone        String?  // 脚本基调（非必填）
+  synopsis    String?  @db.Text // 脚本大概（非必填）
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  character ProjectCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  scenes    ScriptScene[]
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character        ProjectCharacter? @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  scenes           ScriptScene[]
+  scriptCharacters ScriptCharacter[] // 新增关联
 
   @@index([projectId])
   @@index([characterId])
@@ -793,6 +799,23 @@ model ScriptScene {
   @@index([scriptId])
   @@index([scriptId, sortOrder])
   @@map("script_scenes")
+}
+
+// 剧本-角色关联表（多对多）
+model ScriptCharacter {
+  id          String   @id @default(uuid())
+  scriptId    String   @map("script_id")
+  characterId String   @map("character_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  script    ProjectScript    @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  character ProjectCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, characterId])
+  @@index([scriptId])
+  @@index([characterId])
+  @@map("script_characters")
 }
 
 // ==================== 卡密激活模型 ====================
