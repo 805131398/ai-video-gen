@@ -303,6 +303,156 @@ export default function SceneEditorForm({
         ))}
       </div>
 
+      {/* 台词 */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900">台词</h3>
+          <button
+            type="button"
+            onClick={() => {
+              const newDialogue = {
+                characterId: '',
+                text: '',
+                speed: 'normal' as const,
+                tone: '',
+              };
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  dialogues: [...(formData.content?.dialogues || []), newDialogue],
+                },
+              });
+            }}
+            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            + 添加台词
+          </button>
+        </div>
+
+        {formData.content?.dialogues?.map((dialogue, index) => (
+          <div key={`${dialogue.characterId || 'new'}-${index}`} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-700">台词 {index + 1}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('确定要删除这条台词吗？')) {
+                    const newDialogues = formData.content?.dialogues?.filter((_, i) => i !== index) || [];
+                    setFormData({
+                      ...formData,
+                      content: {
+                        ...(formData.content || {}),
+                        dialogues: newDialogues,
+                      },
+                    });
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 text-sm"
+              >
+                删除
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">角色</label>
+              <select
+                value={dialogue.characterId}
+                onChange={(e) => {
+                  const newDialogues = [...(formData.content?.dialogues || [])];
+                  newDialogues[index] = { ...dialogue, characterId: e.target.value };
+                  setFormData({
+                    ...formData,
+                    content: {
+                      ...(formData.content || {}),
+                      dialogues: newDialogues,
+                    },
+                  });
+                }}
+                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">请选择</option>
+                {characters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">台词内容</label>
+              <textarea
+                value={dialogue.text}
+                onChange={(e) => {
+                  const newDialogues = [...(formData.content?.dialogues || [])];
+                  newDialogues[index] = { ...dialogue, text: e.target.value };
+                  setFormData({
+                    ...formData,
+                    content: {
+                      ...(formData.content || {}),
+                      dialogues: newDialogues,
+                    },
+                  });
+                }}
+                rows={2}
+                placeholder="输入台词内容"
+                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">语速</label>
+                <select
+                  value={dialogue.speed}
+                  onChange={(e) => {
+                    const newDialogues = [...(formData.content?.dialogues || [])];
+                    newDialogues[index] = {
+                      ...dialogue,
+                      speed: e.target.value as 'slow' | 'normal' | 'fast',
+                    };
+                    setFormData({
+                      ...formData,
+                      content: {
+                        ...(formData.content || {}),
+                        dialogues: newDialogues,
+                      },
+                    });
+                  }}
+                  className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="slow">慢速</option>
+                  <option value="normal">正常</option>
+                  <option value="fast">快速</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">语气</label>
+                <input
+                  type="text"
+                  value={dialogue.tone}
+                  onChange={(e) => {
+                    const newDialogues = [...(formData.content?.dialogues || [])];
+                    newDialogues[index] = { ...dialogue, tone: e.target.value };
+                    setFormData({
+                      ...formData,
+                      content: {
+                        ...(formData.content || {}),
+                        dialogues: newDialogues,
+                      },
+                    });
+                  }}
+                  placeholder="例如：激动、平静、疑问"
+                  className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="flex justify-end gap-3">
         <button
           type="button"
