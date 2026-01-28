@@ -176,20 +176,22 @@ export default function SceneEditorForm({
         </div>
 
         {formData.content?.characters?.map((char, index) => (
-          <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+          <div key={`${char.characterId || 'new'}-${index}`} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700">角色 {index + 1}</span>
               <button
                 type="button"
                 onClick={() => {
-                  const newCharacters = formData.content?.characters?.filter((_, i) => i !== index) || [];
-                  setFormData({
-                    ...formData,
-                    content: {
-                      ...(formData.content || {}),
-                      characters: newCharacters,
-                    },
-                  });
+                  if (window.confirm('确定要删除这个角色吗？')) {
+                    const newCharacters = formData.content?.characters?.filter((_, i) => i !== index) || [];
+                    setFormData({
+                      ...formData,
+                      content: {
+                        ...(formData.content || {}),
+                        characters: newCharacters,
+                      },
+                    });
+                  }
                 }}
                 className="text-red-500 hover:text-red-700 text-sm"
               >
