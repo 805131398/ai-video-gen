@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Save } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import {
   getScript,
   getScriptScenes,
   createScene,
   deleteScene,
   updateScenesOrder,
-  generateSceneVideo,
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
 import { ProjectScript, ScriptScene, ProjectCharacter } from '../types';
@@ -24,7 +23,6 @@ export default function ProjectScriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'scene' | 'character' | 'timeline'>('scene');
-  const [generatingVideoSceneId, setGeneratingVideoSceneId] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!id || !scriptId) return;
@@ -100,23 +98,9 @@ export default function ProjectScriptPage() {
     }
   };
 
-  const handleGenerateVideo = async (sceneId: string) => {
-    if (!id || !scriptId) return;
-
-    try {
-      setGeneratingVideoSceneId(sceneId);
-      setError('');
-
-      const result = await generateSceneVideo(id, scriptId, sceneId, {
-        promptType: 'smart_combine',
-      });
-
-      alert(`视频生成任务已提交！\n${result.message}\n\n视频将在后台生成，请稍后刷新查看进度。`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || '生成视频失败');
-    } finally {
-      setGeneratingVideoSceneId(null);
-    }
+  // 跳转到场景视频列表页面
+  const handleGenerateVideo = (sceneId: string) => {
+    navigate(`/projects/${id}/script/${scriptId}/scenes/${sceneId}/videos`);
   };
 
   if (loading) return <div className="p-8">加载中...</div>;

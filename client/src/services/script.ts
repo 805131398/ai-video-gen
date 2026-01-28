@@ -1,5 +1,5 @@
 import api from './api';
-import { ProjectScript, ScriptScene, SceneContent } from '../types';
+import { ProjectScript, ScriptScene, SceneContent, SceneVideo } from '../types';
 
 // 获取项目的所有剧本
 export const getProjectScripts = async (projectId: string): Promise<ProjectScript[]> => {
@@ -163,12 +163,19 @@ export const generateSceneVideo = async (
   sceneId: string,
   options?: {
     promptType?: 'smart_combine' | 'ai_optimized';
+    useStoryboard?: boolean;
+    useCharacterImage?: boolean;
+    referenceImage?: string;
+    aspectRatio?: string;
+    duration?: number;
+    hd?: boolean;
   }
 ): Promise<{ taskId: string; message: string; sceneCount: number }> => {
-  return generateScriptVideos(projectId, scriptId, {
-    ...options,
-    sceneIds: [sceneId],
-  });
+  const response = await api.post(
+    `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/generate-video`,
+    options
+  );
+  return response.data;
 };
 
 // 查询视频生成状态
@@ -200,5 +207,41 @@ export const getVideosGenerationStatus = async (
     `/projects/${projectId}/scripts/${scriptId}/videos/status`
   );
   return response.data;
+};
+
+// 获取场景的所有历史视频
+export const getSceneVideos = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string
+): Promise<SceneVideo[]> => {
+  const response = await api.get(
+    `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/videos`
+  );
+  return response.data.data;
+};
+
+// 选择场景视频（标记为 isSelected）
+export const selectSceneVideo = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string,
+  videoId: string
+): Promise<void> => {
+  await api.patch(
+    `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/videos/${videoId}/select`
+  );
+};
+
+// 删除场景视频
+export const deleteSceneVideo = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string,
+  videoId: string
+): Promise<void> => {
+  await api.delete(
+    `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/videos/${videoId}`
+  );
 };
 
