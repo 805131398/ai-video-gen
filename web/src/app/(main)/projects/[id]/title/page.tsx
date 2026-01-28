@@ -9,9 +9,9 @@ import { useProject } from "@/hooks/use-project";
 export default function TitlePage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,14 +24,14 @@ export default function TitlePage() {
 
     try {
       // 先选择标题
-      await fetch(`/api/projects/${projectId}/steps/title/select`, {
+      await fetch(`/api/projects/${id}/steps/title/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ optionId: title.id }),
       });
 
       await mutate();
-      router.push(`/projects/${projectId}/attributes`);
+      router.push(`/projects/${id}/attributes`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "选择标题失败";
       setError(message);
@@ -47,7 +47,7 @@ export default function TitlePage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/topic/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/topic/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: project.topic }),

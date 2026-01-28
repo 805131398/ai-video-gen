@@ -2,49 +2,43 @@
 
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { TopicInput } from "@/components/studio";
+import { AttributeForm, type CopyAttributes } from "@/components/studio";
 import { AIErrorDisplay } from "@/components/ui/ai-error-display";
 import { useProject } from "@/hooks/use-project";
 
-export default function TopicPage() {
+export default function AttributesPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { mutate } = useProject(id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (topic: string) => {
+  const handleSubmit = async (attributes: CopyAttributes) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/topic/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/attributes/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ attributes }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "生成标题失败");
+        throw new Error(data.error || "生成文案失败");
       }
 
       await mutate();
-      router.push(`/projects/${projectId}/title`);
+      router.push(`/projects/${id}/copy`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "生成标题失败";
+      const message = err instanceof Error ? err.message : "生成文案失败";
       setError(message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleRetry = () => {
-    if (project?.topic) {
-      handleSubmit(project.topic);
     }
   };
 
@@ -53,14 +47,12 @@ export default function TopicPage() {
       {error && (
         <AIErrorDisplay
           error={error}
-          onRetry={project?.topic ? handleRetry : undefined}
           onDismiss={() => setError(null)}
         />
       )}
-      <TopicInput
+      <AttributeForm
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        defaultValue={project?.steps?.topic?.value || ""}
       />
     </div>
   );

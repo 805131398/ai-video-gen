@@ -46,7 +46,7 @@ interface FormData {
 export default function ScriptEditorPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.id as string;
+  const id = params.id as string;
   const scriptId = params.scriptId as string | undefined;
   const { toast } = useToast();
 
@@ -70,14 +70,14 @@ export default function ScriptEditorPage() {
   // 加载数据
   useEffect(() => {
     loadData();
-  }, [projectId, scriptId]);
+  }, [id, scriptId]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
 
       // 加载角色列表
-      const charsRes = await fetch(`/api/projects/${projectId}/characters`);
+      const charsRes = await fetch(`/api/projects/${id}/characters`);
       if (charsRes.ok) {
         const charsData = await charsRes.json();
         setCharacters(charsData.data || []);
@@ -86,7 +86,7 @@ export default function ScriptEditorPage() {
       // 如果是编辑模式，加载剧本数据
       if (scriptId) {
         const scriptRes = await fetch(
-          `/api/projects/${projectId}/scripts/${scriptId}`
+          `/api/projects/${id}/scripts/${scriptId}`
         );
         if (scriptRes.ok) {
           const scriptData = await scriptRes.json();
@@ -144,7 +144,7 @@ export default function ScriptEditorPage() {
     try {
       setIsGeneratingSynopsis(true);
       const res = await fetch(
-        `/api/projects/${projectId}/scripts/generate-synopsis`,
+        `/api/projects/${id}/scripts/generate-synopsis`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -199,7 +199,7 @@ export default function ScriptEditorPage() {
     try {
       setIsGeneratingScenes(true);
       const res = await fetch(
-        `/api/projects/${projectId}/scripts/generate-scenes`,
+        `/api/projects/${id}/scripts/generate-scenes`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -260,8 +260,8 @@ export default function ScriptEditorPage() {
       setIsSaving(true);
 
       const url = scriptId
-        ? `/api/projects/${projectId}/scripts/${scriptId}`
-        : `/api/projects/${projectId}/scripts`;
+        ? `/api/projects/${id}/scripts/${scriptId}`
+        : `/api/projects/${id}/scripts`;
 
       const method = scriptId ? "PUT" : "POST";
 
@@ -293,7 +293,7 @@ export default function ScriptEditorPage() {
       }
 
       // 跳转回剧本列表
-      router.push(`/projects/${projectId}/scripts`);
+      router.push(`/projects/${id}/scripts`);
     } catch (error) {
       console.error("保存失败:", error);
       toast({
@@ -312,7 +312,7 @@ export default function ScriptEditorPage() {
       if (!scene.id) {
         // 新场景
         await fetch(
-          `/api/projects/${projectId}/scripts/${savedScriptId}/scenes`,
+          `/api/projects/${id}/scripts/${savedScriptId}/scenes`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

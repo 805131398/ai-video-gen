@@ -9,9 +9,9 @@ import { useProject } from "@/hooks/use-project";
 export default function VideosPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export default function VideosPage() {
 
     try {
       // 选择视频
-      const res = await fetch(`/api/projects/${projectId}/steps/videos/select`, {
+      const res = await fetch(`/api/projects/${id}/steps/videos/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ optionIds: selectedVideos.map((v) => v.id) }),
@@ -41,7 +41,7 @@ export default function VideosPage() {
       }
 
       await mutate();
-      router.push(`/projects/${projectId}/voice`);
+      router.push(`/projects/${id}/voice`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "选择视频失败";
       setError(message);

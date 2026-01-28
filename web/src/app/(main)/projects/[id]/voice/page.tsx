@@ -17,9 +17,9 @@ const MOCK_VOICES = [
 export default function VoicePage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export default function VoicePage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/voice/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/voice/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
@@ -46,7 +46,7 @@ export default function VoicePage() {
       }
 
       await mutate();
-      router.push(`/projects/${projectId}/compose`);
+      router.push(`/projects/${id}/compose`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "生成配音失败";
       setError(message);

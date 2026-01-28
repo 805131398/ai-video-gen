@@ -23,12 +23,12 @@ export default function ProjectLayout({ children }: ProjectLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // 从 URL 中提取 projectId 和当前步骤
+  // 从 URL 中提取 id 和当前步骤
   const pathParts = pathname.split("/");
-  const projectId = pathParts[2]; // /projects/[projectId]/[step]
+  const id = pathParts[2]; // /projects/[id]/[step]
   const currentRouteStep = pathParts[3] as RouteStep;
 
-  const { project, isLoading, isError } = useProject(projectId);
+  const { project, isLoading, isError } = useProject(id);
 
   // 构建步骤数据
   const steps: Step[] = ROUTE_STEP_ORDER.map((step) => {
@@ -60,14 +60,14 @@ export default function ProjectLayout({ children }: ProjectLayoutProps) {
 
     // 如果请求的步骤超过当前进度，重定向
     if (requestedStepIndex > currentStepIndex) {
-      router.replace(`/projects/${projectId}/${currentStepRoute}`);
+      router.replace(`/projects/${id}/${currentStepRoute}`);
     }
-  }, [project, isLoading, currentRouteStep, projectId, router]);
+  }, [project, isLoading, currentRouteStep, id, router]);
 
   // 处理步骤点击
   const handleStepClick = (stepId: string | number) => {
     const step = typeof stepId === "string" ? stepId : ROUTE_STEP_ORDER[stepId];
-    router.push(`/projects/${projectId}/${step}`);
+    router.push(`/projects/${id}/${step}`);
   };
 
   if (isLoading) {

@@ -255,7 +255,7 @@ function ImageCard({
 export default function ImagesPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -269,7 +269,7 @@ export default function ImagesPage() {
   const [pendingImageCount, setPendingImageCount] = useState(4);
 
   // 先获取项目数据（不带轮询）
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
 
   // 获取图片步骤状态，判断是否正在生成
   const imagesStatus = project?.steps?.images?.status;
@@ -306,7 +306,7 @@ export default function ImagesPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/images/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/images/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "generate", count }),
@@ -340,7 +340,7 @@ export default function ImagesPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/images/prompt`, {
+      const res = await fetch(`/api/projects/${id}/steps/images/prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -373,7 +373,7 @@ export default function ImagesPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/images/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/images/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -406,7 +406,7 @@ export default function ImagesPage() {
   const handleCancelGenerate = async () => {
     try {
       await fetch(
-        `/api/projects/${projectId}/steps/images/generate?batchId=${currentBatchId || ""}`,
+        `/api/projects/${id}/steps/images/generate?batchId=${currentBatchId || ""}`,
         { method: "DELETE" }
       );
       setCurrentBatchId(null);
@@ -430,7 +430,7 @@ export default function ImagesPage() {
         formData.append("files", file);
       });
 
-      const res = await fetch(`/api/projects/${projectId}/steps/images/upload`, {
+      const res = await fetch(`/api/projects/${id}/steps/images/upload`, {
         method: "POST",
         body: formData,
       });
@@ -473,7 +473,7 @@ export default function ImagesPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/images/select`, {
+      const res = await fetch(`/api/projects/${id}/steps/images/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ optionIds: selectedIds }),
@@ -486,7 +486,7 @@ export default function ImagesPage() {
       }
 
       await mutate();
-      router.push(`/projects/${projectId}/videos`);
+      router.push(`/projects/${id}/videos`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "保存选择失败";
       setError(message);

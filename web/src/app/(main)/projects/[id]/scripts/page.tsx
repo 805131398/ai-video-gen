@@ -44,7 +44,7 @@ interface Script {
 export default function ScriptsListPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.id as string;
+  const id = params.id as string;
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -55,12 +55,12 @@ export default function ScriptsListPage() {
 
   useEffect(() => {
     loadScripts();
-  }, [projectId]);
+  }, [id]);
 
   const loadScripts = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/projects/${projectId}/scripts`);
+      const res = await fetch(`/api/projects/${id}/scripts`);
       if (res.ok) {
         const data = await res.json();
         setScripts(data.data || []);
@@ -83,7 +83,7 @@ export default function ScriptsListPage() {
     try {
       setIsDeleting(true);
       const res = await fetch(
-        `/api/projects/${projectId}/scripts/${scriptToDelete}`,
+        `/api/projects/${id}/scripts/${scriptToDelete}`,
         {
           method: "DELETE",
         }
@@ -134,14 +134,14 @@ export default function ScriptsListPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/projects/${projectId}`)}
+            onClick={() => router.push(`/projects/${id}`)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             返回项目
           </Button>
           <h1 className="text-2xl font-bold">剧本管理</h1>
         </div>
-        <Button onClick={() => router.push(`/projects/${projectId}/scripts/new`)}>
+        <Button onClick={() => router.push(`/projects/${id}/scripts/new`)}>
           <Plus className="h-4 w-4 mr-2" />
           创建剧本
         </Button>
@@ -162,7 +162,7 @@ export default function ScriptsListPage() {
               key={script.id}
               className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() =>
-                router.push(`/projects/${projectId}/scripts/${script.id}/edit`)
+                router.push(`/projects/${id}/scripts/${script.id}/edit`)
               }
             >
               <div className="space-y-4">
@@ -178,7 +178,7 @@ export default function ScriptsListPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(
-                          `/projects/${projectId}/scripts/${script.id}/edit`
+                          `/projects/${id}/scripts/${script.id}/edit`
                         );
                       }}
                       className="h-8 w-8 p-0"

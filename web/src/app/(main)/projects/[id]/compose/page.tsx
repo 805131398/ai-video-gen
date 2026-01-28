@@ -9,9 +9,9 @@ import { toast } from "sonner";
 
 export default function ComposePage() {
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
   const [isComposing, setIsComposing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function ComposePage() {
     }, 500);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/compose/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/compose/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

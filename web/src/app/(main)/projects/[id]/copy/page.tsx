@@ -9,9 +9,9 @@ import { useProject } from "@/hooks/use-project";
 export default function CopyPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.projectId as string;
+  const id = params.id as string;
 
-  const { project, mutate } = useProject(projectId);
+  const { project, mutate } = useProject(id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export default function CopyPage() {
 
     try {
       // 选择文案并生成图片
-      const res = await fetch(`/api/projects/${projectId}/steps/copy/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/copy/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ copyId: copy.id }),
@@ -37,7 +37,7 @@ export default function CopyPage() {
       }
 
       await mutate();
-      router.push(`/projects/${projectId}/images`);
+      router.push(`/projects/${id}/images`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "生成图片失败";
       setError(message);
@@ -53,7 +53,7 @@ export default function CopyPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/steps/attributes/generate`, {
+      const res = await fetch(`/api/projects/${id}/steps/attributes/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attributes: project.steps.attributes }),
