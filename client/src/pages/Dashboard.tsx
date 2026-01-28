@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
+import { Ticket, Video, BarChart3, Settings, LogOut } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,8 +18,9 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold">AI 视频生成器</h1>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
           >
+            <LogOut className="w-4 h-4" />
             退出登录
           </button>
         </div>
@@ -68,7 +70,7 @@ export default function Dashboard() {
                 <p className="text-gray-600 mb-4">您还没有激活订阅</p>
                 <button
                   onClick={() => navigate('/activate')}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer"
                 >
                   立即激活
                 </button>
@@ -83,25 +85,33 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button
               onClick={() => navigate('/activate')}
-              className="p-4 border rounded-lg hover:bg-gray-50"
+              className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
             >
-              <div className="text-2xl mb-2">🎫</div>
-              <div className="text-sm">激活卡密</div>
+              <div className="flex justify-center mb-2">
+                <Ticket className="w-8 h-8 text-blue-600 group-hover:text-blue-700 transition-colors" />
+              </div>
+              <div className="text-sm font-medium">激活卡密</div>
             </button>
-            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed">
-              <div className="text-2xl mb-2">🎬</div>
-              <div className="text-sm">创建视频</div>
-              <div className="text-xs text-gray-500">即将上线</div>
+            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed transition-colors group">
+              <div className="flex justify-center mb-2">
+                <Video className="w-8 h-8 text-gray-400" />
+              </div>
+              <div className="text-sm font-medium">创建视频</div>
+              <div className="text-xs text-gray-500 mt-1">即将上线</div>
             </button>
-            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed">
-              <div className="text-2xl mb-2">📊</div>
-              <div className="text-sm">使用统计</div>
-              <div className="text-xs text-gray-500">即将上线</div>
+            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed transition-colors group">
+              <div className="flex justify-center mb-2">
+                <BarChart3 className="w-8 h-8 text-gray-400" />
+              </div>
+              <div className="text-sm font-medium">使用统计</div>
+              <div className="text-xs text-gray-500 mt-1">即将上线</div>
             </button>
-            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed">
-              <div className="text-2xl mb-2">⚙️</div>
-              <div className="text-sm">设置</div>
-              <div className="text-xs text-gray-500">即将上线</div>
+            <button className="p-4 border rounded-lg hover:bg-gray-50 opacity-50 cursor-not-allowed transition-colors group">
+              <div className="flex justify-center mb-2">
+                <Settings className="w-8 h-8 text-gray-400" />
+              </div>
+              <div className="text-sm font-medium">设置</div>
+              <div className="text-xs text-gray-500 mt-1">即将上线</div>
             </button>
           </div>
         </div>

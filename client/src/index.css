@@ -1,26 +1,79 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
 
 @theme {
-  --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(9% 0.03 285.88);
+  /* SaaS 专业配色方案 */
+  --color-primary: #2563EB;
+  --color-secondary: #3B82F6;
+  --color-accent: #F97316;
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-text: #1E293B;
+  --color-text-muted: #475569;
+  --color-border: #E2E8F0;
+  --color-error: #EF4444;
+  --color-success: #10B981;
 
+  /* 字体 */
+  --font-heading: 'Poppins', 'Noto Sans SC', sans-serif;
+  --font-body: 'Noto Sans SC', system-ui, sans-serif;
+
+  /* 圆角 */
   --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
 }
 
 @layer base {
   * {
-    border-color: oklch(from var(--color-foreground) l c h / 0.1);
+    @apply border-gray-200;
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    @apply bg-gray-50 text-slate-800;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    @apply text-slate-900 font-semibold;
+  }
+
+  h1 {
+    @apply text-3xl;
+  }
+
+  h2 {
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply text-xl;
   }
 }
 
 @media (prefers-color-scheme: dark) {
   @theme {
-    --color-background: oklch(9% 0.03 285.88);
-    --color-foreground: oklch(98% 0 0);
+    --color-background: #0F172A;
+    --color-surface: #1E293B;
+    --color-text: #F1F5F9;
+    --color-text-muted: #94A3B8;
+    --color-border: #334155;
+  }
+
+  @layer base {
+    * {
+      @apply border-slate-700;
+    }
+
+    body {
+      @apply bg-slate-900 text-slate-100;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      @apply text-slate-50;
+    }
   }
 }
