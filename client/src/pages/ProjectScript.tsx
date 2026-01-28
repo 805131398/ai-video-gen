@@ -7,12 +7,14 @@ import {
   createScene,
   updateScene,
   deleteScene,
+  updateScenesOrder,
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
 import { ProjectScript, ScriptScene, SceneContent, ProjectCharacter } from '../types';
 import SceneEditorForm from '../components/project/SceneEditorForm';
 import CharacterView from '../components/project/CharacterView';
 import TimelineView from '../components/project/TimelineView';
+import DraggableSceneList from '../components/project/DraggableSceneList';
 
 export default function ProjectScriptPage() {
   const { id, scriptId } = useParams<{ id: string; scriptId: string }>();
@@ -85,6 +87,26 @@ export default function ProjectScriptPage() {
       setScenes(scenes.filter((s) => s.id !== sceneId));
     } catch (err: any) {
       setError(err.response?.data?.error || '删除场景失败');
+    }
+  };
+
+  const handleScenesReorder = async (newScenes: ScriptScene[]) => {
+    if (!id || !scriptId) return;
+
+    // 立即更新 UI
+    setScenes(newScenes);
+
+    // 异步更新后端
+    try {
+      await updateScenesOrder(
+        id,
+        scriptId,
+        newScenes.map((s) => s.id)
+      );
+    } catch (err: any) {
+      setError(err.response?.data?.error || '更新排序失败');
+      // 失败时重新加载数据
+      loadData();
     }
   };
 
@@ -168,44 +190,16 @@ export default function ProjectScriptPage() {
           </div>
         </div>
 
-        {/* 场景列表 - 水平滚动 */}
+        {/* 场景列表 - 水平滚动 + 拖拽排序 */}
         {activeTab === 'scene' && (
           <div className="bg-white rounded-xl shadow-sm border-2.5 border-slate-200 p-6">
-            <div className="flex items-center gap-4 overflow-x-auto pb-4">
-              {scenes.map((scene, index) => (
-                <div
-                  key={scene.id}
-                  className="flex-shrink-0 w-64 bg-slate-50 rounded-lg border-2 border-slate-200 p-4 hover:border-blue-400 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-slate-900">场景 {index + 1}</h3>
-                    <button
-                      onClick={() => handleDeleteScene(scene.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      删除
-                    </button>
-                  </div>
-                  <p className="text-sm text-slate-700 mb-2 truncate">{scene.title}</p>
-                  {scene.duration && (
-                    <p className="text-xs text-slate-500 mb-2">⏱ {scene.duration}s</p>
-                  )}
-                  <button
-                    onClick={() => handleEditScene(scene)}
-                    className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                  >
-                    编辑
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={handleAddScene}
-                className="flex-shrink-0 w-64 h-40 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
-              >
-                <Plus className="w-8 h-8 text-slate-400" />
-                <span className="text-sm text-slate-600">添加场景</span>
-              </button>
-            </div>
+            <DraggableSceneList
+              scenes={scenes}
+              onScenesReorder={handleScenesReorder}
+              onAddScene={handleAddScene}
+              onEditScene={handleEditScene}
+              onDeleteScene={handleDeleteScene}
+            />
           </div>
         )}
 
