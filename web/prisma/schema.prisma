@@ -106,6 +106,19 @@ enum AILogStatus {
   FAILED // 失败
 }
 
+// 卡密类型
+enum ActivationCodeType {
+  MONTHLY    // 月卡 (30天)
+  QUARTERLY  // 季卡 (90天)
+  YEARLY     // 年卡 (365天)
+}
+
+// 卡密状态
+enum ActivationCodeStatus {
+  UNUSED  // 未使用
+  USED    // 已使用
+}
+
 // ==================== 租户模型 ====================
 
 // 租户表
@@ -185,6 +198,11 @@ model User {
   aiModelConfigs          AIModelConfig[]
   promptTemplates         PromptTemplate[]
   aiUsageLogs             AIUsageLog[]
+  // 卡密相关关联
+  createdCodes            ActivationCode[]   @relation("CreatedCodes")
+  usedCodes               ActivationCode[]   @relation("UsedCodes")
+  subscription            UserSubscription?
+  activationLogs          ActivationLog[]
 
   @@map("users")
 }
@@ -675,3 +693,63 @@ model AIUsageLog {
 
   @@map("ai_usage_logs")
 }
+
+// ==================== 卡密激活模型 ====================
+
+// 卡密表
+model ActivationCode {
+  id          String                 @id @default(cuid())
+  code        String                 @unique
+  type        ActivationCodeType
+  status      ActivationCodeStatus   @default(UNUSED)
+
+  userId      String?                @map("user_id")
+  user        User?                  @relation("UsedCodes", fields: [userId], references: [id])
+  usedAt      DateTime?              @map("used_at")
+
+  createdBy   String                 @map("created_by")
+  creator     User                   @relation("CreatedCodes", fields: [createdBy], references: [id])
+  createdAt   DateTime               @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("activation_codes")
+}
+
+// 用户订阅表
+model UserSubscription {
+  id          String               @id @default(cuid())
+  userId      String               @unique @map("user_id")
+  user        User                 @relation(fields: [userId], references: [id])
+
+  type        ActivationCodeType
+  expiresAt   DateTime             @map("expires_at")
+
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  @@index([expiresAt])
+  @@map("user_subscriptions")
+}
+
+// 激活日志表
+model ActivationLog {
+  id            String               @id @default(cuid())
+  userId        String               @map("user_id")
+  user          User                 @relation(fields: [userId], references: [id])
+
+  codeId        String               @map("code_id")
+  code          String
+  type          ActivationCodeType
+
+  beforeExpiry  DateTime?            @map("before_expiry")
+  afterExpiry   DateTime             @map("after_expiry")
+
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activation_logs")
+}
+
