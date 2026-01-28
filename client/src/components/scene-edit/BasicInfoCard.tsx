@@ -74,8 +74,8 @@ export default function BasicInfoCard({ formData, onChange }: BasicInfoCardProps
               value={formData.duration || 0}
               onChange={(e) => onChange('duration', parseInt(e.target.value))}
               min="0"
-              max="300"
-              step="5"
+              max="60"
+              step="1"
               className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <span className="text-sm text-slate-600 w-16 text-right">
