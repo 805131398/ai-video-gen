@@ -254,13 +254,16 @@ export class VideoClient {
       case "wan2.6":
         body.prompt = request.prompt;
         body.model = this.modelName;
-        body.aspect_ratio = request.aspectRatio || this.config.defaultAspectRatio || "16:9";
         body.resolution = request.resolution || this.config.defaultResolution || "720p";
         body.duration = request.duration || this.config.defaultDuration || 5;
 
         // 图生视频：如果提供了图片 URL，使用 image_urls 数组（仅支持1张图片）
         if (request.imageUrl) {
           body.image_urls = [request.imageUrl];
+          // 图生视频模式不支持 aspect_ratio 参数，视频比例由输入图片决定
+        } else {
+          // 文生视频模式才支持 aspect_ratio 参数
+          body.aspect_ratio = request.aspectRatio || this.config.defaultAspectRatio || "16:9";
         }
 
         // negative_prompt: 负面提示词
