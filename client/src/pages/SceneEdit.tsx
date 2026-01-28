@@ -76,7 +76,7 @@ export default function SceneEditPage() {
     try {
       await updateScene(id, scriptId, sceneId, formData);
       setHasUnsavedChanges(false);
-      navigate(`/projects/${id}/scripts/${scriptId}`);
+      navigate(`/projects/${id}/script/${scriptId}`);
     } catch (err: any) {
       setError(err.response?.data?.error || '保存失败');
     } finally {
@@ -88,10 +88,10 @@ export default function SceneEditPage() {
   const handleCancel = () => {
     if (hasUnsavedChanges) {
       if (confirm('有未保存的更改，确定要离开吗？')) {
-        navigate(`/projects/${id}/scripts/${scriptId}`);
+        navigate(`/projects/${id}/script/${scriptId}`);
       }
     } else {
-      navigate(`/projects/${id}/scripts/${scriptId}`);
+      navigate(`/projects/${id}/script/${scriptId}`);
     }
   };
 
@@ -140,7 +140,7 @@ export default function SceneEditPage() {
                   项目
                 </span>
                 <span className="mx-2">/</span>
-                <span className="hover:text-slate-700 cursor-pointer" onClick={() => navigate(`/projects/${id}/scripts`)}>
+                <span className="hover:text-slate-700 cursor-pointer" onClick={() => navigate(`/projects/${id}/script/${scriptId}`)}>
                   {script.title}
                 </span>
                 <span className="mx-2">/</span>

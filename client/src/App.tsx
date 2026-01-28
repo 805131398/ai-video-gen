@@ -68,7 +68,7 @@ function App() {
             <Route path="projects/:id" element={<ProjectDetail />} />
             <Route path="projects/:id/scripts" element={<ProjectScripts />} />
             <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
-            <Route path="projects/:id/scripts/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
+            <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
             <Route path="activate" element={<Navigate to="/projects" />} />
           </Route>
         </Routes>

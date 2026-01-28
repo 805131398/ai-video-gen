@@ -60,7 +60,7 @@ export default function ProjectScriptPage() {
 
   const handleEditScene = (scene: ScriptScene) => {
     // 跳转到场景编辑页面
-    navigate(`/projects/${id}/scripts/${scriptId}/scenes/${scene.id}/edit`);
+    navigate(`/projects/${id}/script/${scriptId}/scenes/${scene.id}/edit`);
   };
 
   const handleSaveScene = async (sceneData: Partial<ScriptScene>) => {
