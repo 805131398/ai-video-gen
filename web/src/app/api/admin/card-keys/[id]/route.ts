@@ -5,7 +5,7 @@ import { checkSuperAdmin } from '@/lib/permission';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -19,7 +19,8 @@ export async function DELETE(
       return NextResponse.json({ error: '权限不足' }, { status: 403 });
     }
 
-    const result = await deleteCodes([params.id]);
+    const { id } = await params;
+    const result = await deleteCodes([id]);
 
     if (result.deleted === 0) {
       const error = result.errors[0];
