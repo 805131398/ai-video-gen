@@ -1,15 +1,25 @@
 import { FileText } from 'lucide-react';
+import { SceneContent } from '../../types';
 
 interface BasicInfoCardProps {
   formData: {
     title?: string;
-    description?: string;
     duration?: number;
+    content?: SceneContent;
   };
   onChange: (field: string, value: any) => void;
 }
 
 export default function BasicInfoCard({ formData, onChange }: BasicInfoCardProps) {
+  const content = formData.content || {};
+
+  const handleDescriptionChange = (value: string) => {
+    onChange('content', {
+      ...content,
+      description: value,
+    });
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl shadow-slate-200/50 border border-white/20">
       {/* 卡片标题栏 */}
@@ -42,12 +52,12 @@ export default function BasicInfoCard({ formData, onChange }: BasicInfoCardProps
         {/* 场景描述 */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">
-            场景描述
+            超精描述
           </label>
           <textarea
             id="description"
-            value={formData.description || ''}
-            onChange={(e) => onChange('description', e.target.value)}
+            value={content.description || ''}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
             placeholder="描述场景内容、氛围、关键元素..."
             rows={5}
             className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-slate-900 placeholder-slate-400 resize-none"

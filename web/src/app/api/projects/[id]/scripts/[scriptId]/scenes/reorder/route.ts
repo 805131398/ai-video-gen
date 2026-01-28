@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-middleware';
 import { prisma } from '@/lib/prisma';
 
 export async function PUT(
@@ -8,8 +7,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; scriptId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
 
@@ -26,7 +25,7 @@ export async function PUT(
         id: scriptId,
         projectId,
         project: {
-          userId: session.user.id,
+          userId: user.id,
         },
       },
     });

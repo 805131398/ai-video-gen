@@ -4,12 +4,66 @@ import { prisma } from "@/lib/prisma";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
 import { AIModelType } from "@/generated/prisma/enums";
 import { createAIClient } from "@/lib/ai/client";
+import { transformAISceneToComplete } from "@/lib/utils/scene-transformer";
+
+/**
+ * 验证场景内容是否为完整结构
+ */
+function isCompleteSceneContent(content: any): boolean {
+  return (
+    content &&
+    typeof content.description === 'string' &&
+    typeof content.characterId === 'string' &&
+    content.actions &&
+    typeof content.actions.entrance === 'string' &&
+    typeof content.actions.main === 'string' &&
+    typeof content.actions.exit === 'string' &&
+    Array.isArray(content.dialogues) &&
+    content.camera &&
+    typeof content.camera.type === 'string' &&
+    typeof content.camera.movement === 'string' &&
+    typeof content.camera.shotSize === 'string' &&
+    content.visual &&
+    typeof content.visual.lighting === 'string' &&
+    typeof content.visual.mood === 'string' &&
+    content.audio &&
+    typeof content.audio.volume === 'number'
+  );
+}
 
 interface SceneContent {
-  dialogue?: string;
-  action?: string;
-  camera?: string;
-  characterIds?: string[];
+  description: string;
+  characterId: string; // 主要角色ID
+  otherCharacters?: Array<{
+    characterId: string;
+    role: string; // 在场景中的角色描述
+  }>;
+  actions: {
+    entrance: string; // 入场动作
+    main: string;     // 主要动作
+    exit: string;     // 出场动作
+  };
+  dialogues: Array<{
+    text: string;
+    speaker: string;
+  }>;
+  camera: {
+    type: 'fixed' | 'follow' | 'orbit' | 'handheld';
+    movement: 'push' | 'pull' | 'pan' | 'tilt' | 'dolly';
+    shotSize: 'closeup' | 'close' | 'medium' | 'full' | 'wide';
+    description: string;
+  };
+  visual: {
+    lighting: 'daylight' | 'night' | 'indoor' | 'golden' | 'overcast';
+    mood: 'warm' | 'cool' | 'vintage' | 'vibrant' | 'muted';
+    effects: string;
+    description: string;
+  };
+  audio: {
+    bgMusic: string;
+    soundEffects: string; // 字符串，不是数组
+    volume: number; // 0-100
+  };
 }
 
 interface GeneratedScene {
@@ -100,34 +154,127 @@ export async function POST(
 
 要求：
 - 返回一个 JSON 数组，包含${sceneCount}个场景对象
-- 每个场景对象包含：title（场景标题，5-15字）、duration（预计时长，单位秒，5-30秒）、content（场景内容对象）
-- content 对象包含：dialogue（台词）、action（动作描述）、camera（镜头描述）、characterIds（出场角色ID数组）
+- 每个场景对象包含：title（场景标题，5-15字）、duration（预计时长，单位秒，5-60秒）、content（场景内容对象）
+- content 对象必须包含以下完整结构：
+  {
+    "description": "场景描述（20-50字，必须具体描述场景环境、氛围、角色位置和画面主要元素，要有画面感）",
+    "characterId": "主要角色ID（从角色列表中选择一个，执行主要动作的角色）",
+    "otherCharacters": [
+      {
+        "characterId": "其他角色ID（可选，场景中出现的其他角色）",
+        "role": "角色描述（如：接受治疗的患者、旁观的家人、互动的朋友等）"
+      }
+    ],
+    "actions": {
+      "entrance": "入场动作描述（可以描述多个角色的入场，如：中医从药房走出，父亲已坐在椅子上等待）",
+      "main": "主要动作描述（可以描述多个角色的互动，如：将茶杯稳稳放在父亲面前，眼神温柔地注视着他，微微点头示意）",
+      "exit": "出场动作描述（可以描述多个角色的出场，如：中医转身回到药房，父亲起身离开）"
+    },
+    "dialogues": [
+      {
+        "text": "台词内容（15-30字，口语化）",
+        "speaker": "说话人（角色名称）"
+      }
+    ],
+    "camera": {
+      "type": "镜头类型（fixed固定/follow跟随/orbit环绕/handheld手持）",
+      "movement": "运镜方式（push推镜/pull拉镜/pan摇镜/tilt俯仰/dolly移动）",
+      "shotSize": "景别（closeup特写/close近景/medium中景/full全景/wide远景）",
+      "description": "自定义镜头描述"
+    },
+    "visual": {
+      "lighting": "光线条件（daylight日光/night夜晚/indoor室内/golden黄金时刻/overcast阴天）",
+      "mood": "色调氛围（warm温暖/cool冷色/vintage复古/vibrant鲜艳/muted柔和）",
+      "effects": "视觉效果描述（字符串，如：柔光、滤镜等）",
+      "description": "自定义视觉描述"
+    },
+    "audio": {
+      "bgMusic": "背景音乐类型（如：轻松舒缓、活力动感、戏剧紧张、浪漫温馨、史诗宏大等）",
+      "soundEffects": "音效描述（字符串，如：脚步声、门铃声、风声等，多个用逗号分隔）",
+      "volume": 70
+    }
+  }
+
+场景创作要点：
 - 场景要连贯，符合剧本大概的故事线
-- 台词要口语化，适合短视频
+- **场景描述（description）必须具体生动**：
+  * 描述场景的环境（如：明亮的办公室、药香四溢的小院、温馨的客厅）
+  * 描述场景的氛围（如：温暖、紧张、轻松、神秘）
+  * 描述角色的位置和状态（如：站在办公桌前、坐在沙发上、走在街道上）
+  * 描述画面的主要元素（如：阳光洒满、灯光柔和、人来人往）
+  * 要让人能够想象出具体的画面
+- **多角色场景处理**：
+  * characterId 是主要角色（执行主要动作的角色）
+  * 如果场景中有其他角色出现，使用 otherCharacters 数组添加
+  * otherCharacters 中的 role 要描述该角色在场景中的作用（如：接受治疗的患者、旁观的家人）
+  * 动作描述（entrance/main/exit）可以自然地描述多个角色的互动
+  * 例如："将茶杯稳稳放在父亲面前，眼神温柔地注视着他" - 这样的描述包含了两个角色的互动
+- 台词要口语化，适合短视频，每句控制在 15-30 字
+- 动作描述要具体生动，可以包含多个角色的互动
+- 根据场景内容合理选择镜头类型、运镜方式和景别
+- 为每个场景选择合适的光线条件和色调氛围
+- 为每个场景选择合适的背景音乐和音效
+- 音量默认设置为 70
 ${tone ? `- 基调风格：${tone}` : ""}
 - 只输出 JSON 数组，不要其他说明
 
 示例输出格式：
 [
   {
-    "title": "开场引入",
-    "duration": 10,
+    "title": "温情诊疗",
+    "duration": 15,
     "content": {
-      "dialogue": "大家好，今天跟大家分享...",
-      "action": "主角面对镜头，微笑打招呼",
-      "camera": "正面中景，温暖光线",
-      "characterIds": ["角色ID"]
+      "description": "温馨的诊室里，老中医站在父亲身旁，灯光柔和，桌上摆放着茶具和药材，氛围宁静祥和",
+      "characterId": "中医ID",
+      "otherCharacters": [
+        {
+          "characterId": "父亲ID",
+          "role": "接受治疗的患者"
+        }
+      ],
+      "actions": {
+        "entrance": "中医从药房走出，父亲已坐在椅子上等待",
+        "main": "将茶杯稳稳放在父亲面前，眼神温柔地注视着他，微微点头示意",
+        "exit": "中医转身回到药房，父亲起身离开"
+      },
+      "dialogues": [
+        {
+          "text": "这茶能帮你缓解疼痛，慢慢喝，别着急",
+          "speaker": "老中医"
+        },
+        {
+          "text": "谢谢您，这些天好多了",
+          "speaker": "父亲"
+        }
+      ],
+      "camera": {
+        "type": "fixed",
+        "movement": "push",
+        "shotSize": "medium",
+        "description": "从中景推进到近景，捕捉两人的互动"
+      },
+      "visual": {
+        "lighting": "indoor",
+        "mood": "warm",
+        "effects": "柔光",
+        "description": "温暖的室内光线"
+      },
+      "audio": {
+        "bgMusic": "轻松舒缓",
+        "soundEffects": "茶水声",
+        "volume": 70
+      }
     }
   }
 ]`;
 
     const prompt = `剧本大概：
-${synopsis}
+${synopsis || "无（请补充剧本核心故事线）"}
 
 角色列表：
-${characterDescriptions}
+${characterDescriptions || "无（请补充角色ID、名称、设定）"}
 
-请生成${sceneCount}个场景：`;
+请严格按照要求生成${sceneCount || 3}个场景，仅输出JSON数组：`;
 
     // 调用 AI 生成
     const client = createAIClient(config);
@@ -154,24 +301,28 @@ ${characterDescriptions}
       );
     }
 
-    // 验证和清理场景数据
+    // 验证和清理场景数据，支持降级转换
     const validScenes = scenes
       .filter((scene) => scene.title && scene.duration && scene.content)
       .slice(0, sceneCount)
-      .map((scene) => ({
-        title: scene.title,
-        duration: Math.max(5, Math.min(60, scene.duration)), // 限制时长在 5-60 秒
-        content: {
-          dialogue: scene.content.dialogue || "",
-          action: scene.content.action || "",
-          camera: scene.content.camera || "",
-          characterIds: Array.isArray(scene.content.characterIds)
-            ? scene.content.characterIds.filter((id) =>
-                characterIds.includes(id)
-              )
-            : characterIds,
-        },
-      }));
+      .map((scene) => {
+        let content = scene.content;
+
+        // 如果 AI 返回的不是完整结构，使用转换层降级处理
+        if (!isCompleteSceneContent(content)) {
+          console.warn('AI 返回简化格式，使用转换层处理:', scene.title);
+          content = transformAISceneToComplete(
+            content as any,
+            characters.map((c) => ({ id: c.id, name: c.name }))
+          );
+        }
+
+        return {
+          title: scene.title,
+          duration: Math.max(5, Math.min(60, scene.duration)), // 限制时长在 5-60 秒
+          content,
+        };
+      });
 
     if (validScenes.length === 0) {
       return NextResponse.json(

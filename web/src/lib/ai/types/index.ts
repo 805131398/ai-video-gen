@@ -115,6 +115,7 @@ export type VideoProvider =
   | "minimax"          // MiniMax
   | "zhipu-video"      // 智谱 CogVideo
   | "fal-video"        // fal.ai 视频模型
+  | "bltcy"            // bltcy 视频生成
   | "custom";
 
 export interface VideoConfigOptions extends BaseConfigOptions {
@@ -347,6 +348,20 @@ export const VIDEO_FORMAT_DEFAULTS: Record<string, Partial<VideoConfigOptions>> 
     videoUrlPath: "video.url",
     pollInterval: 5000,
     maxWaitTime: 600000,
+  },
+  bltcy: {
+    provider: "bltcy",
+    submitEndpoint: "/v2/videos/generations",
+    statusEndpoint: "/v2/videos/generations/{task_id}",
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    taskIdPath: "id",
+    taskStatusPath: "status",
+    videoUrlPath: "video_url",
+    pollInterval: 5000,
+    maxWaitTime: 600000,
+    defaultDuration: 10,
+    defaultAspectRatio: "16:9",
   },
 };
 

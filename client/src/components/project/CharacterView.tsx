@@ -14,19 +14,30 @@ export default function CharacterView({
   // 按角色分组场景数据
   const characterScenes = characters.map((character) => {
     const characterDialogues = scenes.flatMap((scene) => {
-      const dialogues = scene.content.dialogues?.filter(
-        (d) => d.characterId === character.id
-      ) || [];
-      const actions = scene.content.characters?.filter(
+      // 检查角色是否是主要角色
+      const isMainCharacter = scene.content.characterId === character.id;
+
+      // 检查角色是否在其他角色列表中
+      const otherCharacterInfo = scene.content.otherCharacters?.find(
         (c) => c.characterId === character.id
+      );
+
+      // 如果角色不在这个场景中，跳过
+      if (!isMainCharacter && !otherCharacterInfo) return [];
+
+      // 过滤该角色的台词（通过说话人名称匹配）
+      const dialogues = scene.content.dialogues?.filter(
+        (d) => d.speaker === character.name
       ) || [];
 
-      if (dialogues.length === 0 && actions.length === 0) return [];
+      // 获取角色在场景中的角色描述
+      const role = isMainCharacter ? '主要角色' : otherCharacterInfo?.role || '其他角色';
 
       return [{
         scene,
         dialogues,
-        actions,
+        role,
+        isMainCharacter,
       }];
     });
 
@@ -55,7 +66,7 @@ export default function CharacterView({
           </div>
 
           <div className="space-y-4">
-            {charScenes.map(({ scene, dialogues, actions }, index) => (
+            {charScenes.map(({ scene, dialogues, role, isMainCharacter }, index) => (
               <div
                 key={`${scene.id}-${index}`}
                 className="p-4 bg-slate-50 rounded-lg border border-slate-200"
@@ -63,9 +74,18 @@ export default function CharacterView({
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h4 className="font-medium text-slate-900">{scene.title}</h4>
-                    {scene.duration && (
-                      <span className="text-xs text-slate-500">⏱ {scene.duration}s</span>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {scene.duration && (
+                        <span className="text-xs text-slate-500">⏱ {scene.duration}s</span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        isMainCharacter
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {role}
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={() => onEditScene(scene)}
@@ -75,14 +95,27 @@ export default function CharacterView({
                   </button>
                 </div>
 
-                {actions.length > 0 && (
+                {/* 显示动作 */}
+                {scene.content.actions && (
                   <div className="mb-3">
                     <p className="text-xs font-medium text-slate-600 mb-1">动作：</p>
-                    {actions.map((action, i) => (
-                      <p key={i} className="text-sm text-slate-700">
-                        • {action.action} ({action.emotion}) - {action.position === 'left' ? '左侧' : action.position === 'center' ? '中间' : '右侧'}
-                      </p>
-                    ))}
+                    <div className="space-y-1">
+                      {scene.content.actions.entrance && (
+                        <p className="text-sm text-slate-700">
+                          • 入场：{scene.content.actions.entrance}
+                        </p>
+                      )}
+                      {scene.content.actions.main && (
+                        <p className="text-sm text-slate-700">
+                          • 主要：{scene.content.actions.main}
+                        </p>
+                      )}
+                      {scene.content.actions.exit && (
+                        <p className="text-sm text-slate-700">
+                          • 出场：{scene.content.actions.exit}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -92,10 +125,6 @@ export default function CharacterView({
                     {dialogues.map((dialogue, i) => (
                       <div key={i} className="text-sm text-slate-700 mb-2">
                         <p className="font-medium">"{dialogue.text}"</p>
-                        <p className="text-xs text-slate-500">
-                          语速：{dialogue.speed === 'slow' ? '慢速' : dialogue.speed === 'fast' ? '快速' : '正常'}
-                          {dialogue.tone && ` | 语气：${dialogue.tone}`}
-                        </p>
                       </div>
                     ))}
                   </div>

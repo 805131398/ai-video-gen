@@ -16,7 +16,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical } from 'lucide-react';
+import { Plus, GripVertical, Edit, Trash2, Video } from 'lucide-react';
 import { ScriptScene } from '../../types';
 
 interface DraggableSceneCardProps {
@@ -24,9 +24,10 @@ interface DraggableSceneCardProps {
   index: number;
   onEdit: () => void;
   onDelete: () => void;
+  onGenerateVideo: () => void;
 }
 
-function DraggableSceneCard({ scene, index, onEdit, onDelete }: DraggableSceneCardProps) {
+function DraggableSceneCard({ scene, index, onEdit, onDelete, onGenerateVideo }: DraggableSceneCardProps) {
   const {
     attributes,
     listeners,
@@ -64,8 +65,9 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete }: DraggableSceneCa
             e.stopPropagation();
             onDelete();
           }}
-          className="text-red-500 hover:text-red-700 text-sm"
+          className="flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors text-sm"
         >
+          <Trash2 className="w-3.5 h-3.5" />
           删除
         </button>
       </div>
@@ -73,15 +75,28 @@ function DraggableSceneCard({ scene, index, onEdit, onDelete }: DraggableSceneCa
       {scene.duration && (
         <p className="text-xs text-slate-500 mb-2">⏱ {scene.duration}s</p>
       )}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-        className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-      >
-        编辑
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+        >
+          <Edit className="w-3.5 h-3.5" />
+          编辑
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onGenerateVideo();
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
+        >
+          <Video className="w-3.5 h-3.5" />
+          生成视频
+        </button>
+      </div>
     </div>
   );
 }
@@ -92,6 +107,7 @@ interface DraggableSceneListProps {
   onAddScene: () => void;
   onEditScene: (scene: ScriptScene) => void;
   onDeleteScene: (sceneId: string) => void;
+  onGenerateVideo: (sceneId: string) => void;
 }
 
 export default function DraggableSceneList({
@@ -100,6 +116,7 @@ export default function DraggableSceneList({
   onAddScene,
   onEditScene,
   onDeleteScene,
+  onGenerateVideo,
 }: DraggableSceneListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -137,6 +154,7 @@ export default function DraggableSceneList({
               index={index}
               onEdit={() => onEditScene(scene)}
               onDelete={() => onDeleteScene(scene.id)}
+              onGenerateVideo={() => onGenerateVideo(scene.id)}
             />
           ))}
         </SortableContext>

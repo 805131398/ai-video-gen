@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { generateVideos } from "@/lib/ai/video-generator";
 
 // POST /api/ai/videos - 生成视频 (MVP 模拟)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 

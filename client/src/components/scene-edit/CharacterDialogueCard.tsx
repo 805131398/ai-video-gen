@@ -21,11 +21,36 @@ export default function CharacterDialogueCard({
 }: CharacterDialogueCardProps) {
   const content = formData.content || {};
   const dialogues = content.dialogues || [];
+  const otherCharacters = content.otherCharacters || [];
 
   const handleCharacterChange = (characterId: string) => {
     onChange('content', {
       ...content,
       characterId,
+    });
+  };
+
+  const handleAddOtherCharacter = () => {
+    onChange('content', {
+      ...content,
+      otherCharacters: [...otherCharacters, { characterId: '', role: '' }],
+    });
+  };
+
+  const handleOtherCharacterChange = (index: number, field: string, value: string) => {
+    const newOtherCharacters = [...otherCharacters];
+    newOtherCharacters[index] = { ...newOtherCharacters[index], [field]: value };
+    onChange('content', {
+      ...content,
+      otherCharacters: newOtherCharacters,
+    });
+  };
+
+  const handleDeleteOtherCharacter = (index: number) => {
+    const newOtherCharacters = otherCharacters.filter((_, i) => i !== index);
+    onChange('content', {
+      ...content,
+      otherCharacters: newOtherCharacters,
     });
   };
 
@@ -95,7 +120,7 @@ export default function CharacterDialogueCard({
           {/* 角色选择 */}
           <div>
             <label htmlFor="character" className="block text-sm font-medium text-slate-700 mb-2">
-              选择角色
+              主要角色
             </label>
             <select
               id="character"
@@ -112,6 +137,74 @@ export default function CharacterDialogueCard({
             </select>
             {selectedCharacter && (
               <p className="mt-2 text-sm text-slate-600">{selectedCharacter.description}</p>
+            )}
+          </div>
+
+          {/* 其他角色 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-slate-700">其他角色</h4>
+              <button
+                onClick={handleAddOtherCharacter}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                添加角色
+              </button>
+            </div>
+            {otherCharacters.length === 0 ? (
+              <div className="text-center py-4 text-slate-500 text-sm bg-slate-50 rounded-lg">
+                暂无其他角色，点击"添加角色"添加场景中的其他角色
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {otherCharacters.map((otherChar, index) => {
+                  const character = characters.find((c) => c.id === otherChar.characterId);
+                  return (
+                    <div key={index} className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">角色</label>
+                          <select
+                            value={otherChar.characterId || ''}
+                            onChange={(e) => handleOtherCharacterChange(index, 'characterId', e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 cursor-pointer"
+                          >
+                            <option value="">请选择角色</option>
+                            {characters.map((character) => (
+                              <option key={character.id} value={character.id}>
+                                {character.name}
+                              </option>
+                            ))}
+                          </select>
+                          {character && (
+                            <p className="mt-1 text-xs text-slate-500">{character.description}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">在场景中的角色</label>
+                          <input
+                            type="text"
+                            value={otherChar.role || ''}
+                            onChange={(e) => handleOtherCharacterChange(index, 'role', e.target.value)}
+                            placeholder="例如：接受治疗的患者、旁观的家人"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 placeholder-slate-400"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteOtherCharacter(index)}
+                        className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 

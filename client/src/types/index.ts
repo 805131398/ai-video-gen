@@ -126,32 +126,36 @@ declare global {
 // 剧本场景内容
 export interface SceneContent {
   description: string;
-  sceneType: 'indoor' | 'outdoor' | 'special';
-  characters: Array<{
+  characterId: string; // 主要角色ID
+  otherCharacters?: Array<{
     characterId: string;
-    characterName: string;
-    action: string;
-    emotion: string;
-    position: 'left' | 'center' | 'right';
+    role: string; // 在场景中的角色描述
   }>;
+  actions: {
+    entrance: string; // 入场动作
+    main: string;     // 主要动作
+    exit: string;     // 出场动作
+  };
   dialogues: Array<{
-    characterId: string;
     text: string;
-    speed: 'slow' | 'normal' | 'fast';
-    tone: string;
+    speaker: string; // 说话人（角色名称）
   }>;
   camera: {
-    type: 'closeup' | 'medium' | 'full' | 'wide';
-    movement: 'static' | 'push' | 'pull' | 'follow';
+    type: 'fixed' | 'follow' | 'orbit' | 'handheld';
+    movement: 'push' | 'pull' | 'pan' | 'tilt' | 'dolly';
+    shotSize: 'closeup' | 'close' | 'medium' | 'full' | 'wide';
+    description: string;
   };
   visual: {
-    transition: string;
-    effects: string[];
-    subtitleStyle: string;
+    lighting: 'daylight' | 'night' | 'indoor' | 'golden' | 'overcast';
+    mood: 'warm' | 'cool' | 'vintage' | 'vibrant' | 'muted';
+    effects: string;
+    description: string;
   };
   audio: {
-    bgm: string;
-    soundEffects: string[];
+    bgMusic: string;
+    soundEffects: string; // 字符串，不是数组
+    volume: number; // 0-100
   };
 }
 
@@ -181,3 +185,36 @@ export interface ProjectScript {
   character?: ProjectCharacter;
   scenes?: ScriptScene[];
 }
+
+// 场景视频
+export interface SceneVideo {
+  id: string;
+  sceneId: string;
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+  prompt: string;
+  promptType: 'smart_combine' | 'ai_optimized';
+  status: 'pending' | 'generating' | 'completed' | 'failed';
+  taskId?: string | null;
+  errorMessage?: string | null;
+  metadata?: Record<string, unknown> | null;
+  isSelected: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 视频生成状态
+export interface VideoGenerationStatus {
+  sceneId: string;
+  sceneTitle: string;
+  status: 'pending' | 'generating' | 'completed' | 'failed' | 'no_video';
+  progress: number;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+  errorMessage?: string | null;
+  videoId?: string | null;
+  createdAt?: string | null;
+}
+

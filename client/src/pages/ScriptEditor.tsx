@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Video } from 'lucide-react';
 import { getProject, getProjectCharacters } from '../services/project';
 import {
   getScript,
@@ -9,6 +9,7 @@ import {
   generateSynopsis,
   generateScenes,
   createScene,
+  generateScriptVideos,
 } from '../services/script';
 import { Project, ProjectCharacter, ScriptScene, SceneContent } from '../types';
 import { ToneCombobox } from '../components/ToneCombobox';
@@ -116,6 +117,7 @@ export default function ScriptEditor() {
       const result = await generateSynopsis(id!, {
         characterIds: formData.characterIds,
         tone: formData.tone || undefined,
+        existingSynopsis: formData.synopsis.trim() || undefined, // 传递已输入的内容
       });
       setFormData((prev) => ({ ...prev, synopsis: result.synopsis }));
     } catch (err: any) {
@@ -214,6 +216,36 @@ export default function ScriptEditor() {
     }));
   };
 
+  // 生成视频
+  const handleGenerateVideos = async () => {
+    // 检查是否已保存
+    if (!scriptId) {
+      setError('请先保存剧本后再生成视频');
+      return;
+    }
+
+    // 检查是否有场景
+    if (formData.scenes.length === 0) {
+      setError('请先生成场景后再生成视频');
+      return;
+    }
+
+    try {
+      // 调用生成视频 API
+      const result = await generateScriptVideos(id!, scriptId, {
+        promptType: 'smart_combine', // 默认使用智能组合方式
+      });
+
+      // 显示成功消息
+      alert(`视频生成任务已提交！\n任务 ID: ${result.taskId}\n${result.message}\n\n视频将在后台生成，请返回剧本列表查看进度。`);
+
+      // 返回剧本列表页
+      navigate(`/projects/${id}/scripts`);
+    } catch (err: any) {
+      setError(err.response?.data?.error || '生成视频失败');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -246,6 +278,15 @@ export default function ScriptEditor() {
               className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
             >
               取消
+            </button>
+            <button
+              onClick={handleGenerateVideos}
+              disabled={!scriptId || formData.scenes.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!scriptId ? '请先保存剧本' : formData.scenes.length === 0 ? '请先生成场景' : '为所有场景生成视频'}
+            >
+              <Video className="w-4 h-4" />
+              生成视频
             </button>
             <button
               onClick={handleSave}

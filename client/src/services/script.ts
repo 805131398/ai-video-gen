@@ -119,6 +119,7 @@ export const generateSynopsis = async (
   data: {
     characterIds: string[];
     tone?: string;
+    existingSynopsis?: string; // 用户已输入的内容
   }
 ): Promise<{ synopsis: string }> => {
   const response = await api.post(`/projects/${projectId}/scripts/generate-synopsis`, data);
@@ -138,3 +139,66 @@ export const generateScenes = async (
   const response = await api.post(`/projects/${projectId}/scripts/generate-scenes`, data);
   return response.data;
 };
+
+// 为剧本生成视频
+export const generateScriptVideos = async (
+  projectId: string,
+  scriptId: string,
+  options?: {
+    promptType?: 'smart_combine' | 'ai_optimized';
+    sceneIds?: string[]; // 可选：指定要生成视频的场景 ID
+  }
+): Promise<{ taskId: string; message: string; sceneCount: number }> => {
+  const response = await api.post(
+    `/projects/${projectId}/scripts/${scriptId}/generate-videos`,
+    options
+  );
+  return response.data;
+};
+
+// 为单个场景生成视频
+export const generateSceneVideo = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string,
+  options?: {
+    promptType?: 'smart_combine' | 'ai_optimized';
+  }
+): Promise<{ taskId: string; message: string; sceneCount: number }> => {
+  return generateScriptVideos(projectId, scriptId, {
+    ...options,
+    sceneIds: [sceneId],
+  });
+};
+
+// 查询视频生成状态
+export const getVideosGenerationStatus = async (
+  projectId: string,
+  scriptId: string
+): Promise<{
+  success: boolean;
+  scriptId: string;
+  overallStatus: 'not_started' | 'generating' | 'completed' | 'failed' | 'partial';
+  scenes: Array<{
+    sceneId: string;
+    sceneTitle: string;
+    status: 'pending' | 'generating' | 'completed' | 'failed' | 'no_video';
+    progress: number;
+    videoUrl?: string | null;
+    thumbnailUrl?: string | null;
+    duration?: number | null;
+    errorMessage?: string | null;
+    videoId?: string | null;
+    createdAt?: string | null;
+  }>;
+  totalScenes: number;
+  completedScenes: number;
+  failedScenes: number;
+  generatingScenes: number;
+}> => {
+  const response = await api.get(
+    `/projects/${projectId}/scripts/${scriptId}/videos/status`
+  );
+  return response.data;
+};
+

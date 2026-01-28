@@ -137,6 +137,30 @@ export class VideoClient {
         if (request.imageUrl) body.first_frame_image = request.imageUrl;
         break;
 
+      case "bltcy":
+        body.prompt = request.prompt;
+        body.model = this.modelName;
+        body.aspect_ratio = request.aspectRatio || this.config.defaultAspectRatio || "16:9";
+        body.hd = this.config.defaultResolution === "1080p" || this.config.defaultResolution === "hd";
+        body.duration = String(request.duration || this.config.defaultDuration || 10);
+
+        // 图生视频：如果提供了图片 URL，使用 images 数组
+        if (request.imageUrl) {
+          body.images = [request.imageUrl];
+        }
+
+        // 可选参数
+        if (this.config.extraHeaders?.watermark !== undefined) {
+          body.watermark = this.config.extraHeaders.watermark;
+        }
+        if (this.config.extraHeaders?.private !== undefined) {
+          body.private = this.config.extraHeaders.private;
+        }
+        if (this.config.extraHeaders?.notify_hook) {
+          body.notify_hook = this.config.extraHeaders.notify_hook;
+        }
+        break;
+
       default:
         // 通用格式
         if (request.duration) body.duration = request.duration;

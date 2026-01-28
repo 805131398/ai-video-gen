@@ -83,9 +83,12 @@ const IMAGE_PROVIDER_LABELS: Record<ImageProvider, string> = {
 const VIDEO_PROVIDER_LABELS: Record<VideoProvider, string> = {
   sora: "Sora (OpenAI)",
   runway: "Runway",
+  pika: "Pika Labs",
   kling: "可灵 (快手)",
+  minimax: "MiniMax",
   "zhipu-video": "智谱 CogVideo",
   "fal-video": "fal.ai",
+  bltcy: "bltcy",
   custom: "自定义",
 };
 

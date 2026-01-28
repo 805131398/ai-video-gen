@@ -799,6 +799,32 @@ model ScriptScene {
   @@index([scriptId])
   @@index([scriptId, sortOrder])
   @@map("script_scenes")
+
+  videos SceneVideo[]
+}
+
+// 场景视频表
+model SceneVideo {
+  id            String   @id @default(uuid())
+  sceneId       String   @map("scene_id")
+  videoUrl      String   @map("video_url") // 生成的视频 URL
+  thumbnailUrl  String?  @map("thumbnail_url") // 视频缩略图
+  duration      Int?     // 视频时长（秒）
+  prompt        String   @db.Text // 使用的 prompt
+  promptType    String   @map("prompt_type") // "smart_combine" 或 "ai_optimized"
+  status        String   @default("pending") // "pending", "generating", "completed", "failed"
+  taskId        String?  @map("task_id") // AI 服务返回的任务 ID
+  errorMessage  String?  @map("error_message") @db.Text // 失败时的错误信息
+  metadata      Json?    // 其他元数据（分辨率、格式等）
+  isSelected    Boolean  @default(false) @map("is_selected") // 是否被选中使用
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  scene ScriptScene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@index([sceneId])
+  @@index([status])
+  @@map("scene_videos")
 }
 
 // 剧本-角色关联表（多对多）

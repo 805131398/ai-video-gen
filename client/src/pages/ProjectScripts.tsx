@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, FileText, Edit, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, Edit, Trash2, Users, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { getProject, getProjectCharacters } from '../services/project';
-import { getProjectScripts, deleteScript } from '../services/script';
+import { getProjectScripts, deleteScript, getVideosGenerationStatus } from '../services/script';
 import { Project, ProjectCharacter, ProjectScript } from '../types';
 
 export default function ProjectScripts() {
@@ -13,6 +13,7 @@ export default function ProjectScripts() {
   const [scripts, setScripts] = useState<ProjectScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [videoStatuses, setVideoStatuses] = useState<Record<string, any>>({});
 
   const loadData = async () => {
     if (!id) return;
@@ -25,6 +26,9 @@ export default function ProjectScripts() {
       setProject(projectData);
       setCharacters(charactersData);
       setScripts(scriptsData);
+
+      // 加载每个剧本的视频状态
+      await loadVideoStatuses(scriptsData);
     } catch (err: any) {
       setError(err.response?.data?.error || '加载失败');
     } finally {
@@ -32,9 +36,47 @@ export default function ProjectScripts() {
     }
   };
 
+  // 加载视频状态
+  const loadVideoStatuses = async (scriptsList: ProjectScript[]) => {
+    if (!id) return;
+    const statuses: Record<string, any> = {};
+
+    for (const script of scriptsList) {
+      try {
+        const status = await getVideosGenerationStatus(id, script.id);
+        statuses[script.id] = status;
+      } catch (err) {
+        console.error(`Failed to load video status for script ${script.id}:`, err);
+      }
+    }
+
+    setVideoStatuses(statuses);
+  };
+
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // 轮询机制：检查是否有正在生成的视频
+  useEffect(() => {
+    const hasGenerating = Object.values(videoStatuses).some(
+      (status) => status?.overallStatus === 'generating'
+    );
+
+    if (!hasGenerating) return;
+
+    // 每 10 秒轮询一次
+    const interval = setInterval(async () => {
+      if (!id) return;
+      try {
+        await loadVideoStatuses(scripts);
+      } catch (err) {
+        console.error('轮询失败:', err);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [videoStatuses, scripts, id]);
 
   const handleDeleteScript = async (scriptId: string) => {
     if (!id) return;
@@ -131,7 +173,7 @@ export default function ProjectScripts() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase max-w-xs">
                     剧本标题
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
@@ -139,6 +181,9 @@ export default function ProjectScripts() {
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                     场景数
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+                    视频状态
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
                     版本
@@ -158,7 +203,7 @@ export default function ProjectScripts() {
                     className="hover:bg-slate-50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/projects/${id}/script/${script.id}`)}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-xs">
                       <div className="text-sm font-semibold text-slate-900">{script.title}</div>
                       {script.description && (
                         <div className="text-xs text-slate-500 mt-1 line-clamp-1">
@@ -178,6 +223,45 @@ export default function ProjectScripts() {
                       <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
                         {script.scenes?.length || 0} 个场景
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {videoStatuses[script.id] ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          {videoStatuses[script.id].overallStatus === 'generating' && (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                              <span className="text-xs text-blue-600 font-medium">
+                                生成中 ({videoStatuses[script.id].completedScenes}/{videoStatuses[script.id].totalScenes})
+                              </span>
+                            </>
+                          )}
+                          {videoStatuses[script.id].overallStatus === 'completed' && (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="text-xs text-green-600 font-medium">已完成</span>
+                            </>
+                          )}
+                          {videoStatuses[script.id].overallStatus === 'failed' && (
+                            <>
+                              <XCircle className="w-4 h-4 text-red-600" />
+                              <span className="text-xs text-red-600 font-medium">生成失败</span>
+                            </>
+                          )}
+                          {videoStatuses[script.id].overallStatus === 'partial' && (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-amber-600" />
+                              <span className="text-xs text-amber-600 font-medium">
+                                部分完成 ({videoStatuses[script.id].completedScenes}/{videoStatuses[script.id].totalScenes})
+                              </span>
+                            </>
+                          )}
+                          {videoStatuses[script.id].overallStatus === 'not_started' && (
+                            <span className="text-xs text-slate-400">未生成</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm text-slate-600">v{script.version}</span>
