@@ -453,6 +453,183 @@ export default function SceneEditorForm({
         ))}
       </div>
 
+      {/* 镜头设置 */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">镜头设置</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">镜头类型</label>
+            <select
+              value={formData.content?.camera?.type || 'medium'}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  content: {
+                    ...(formData.content || {}),
+                    camera: {
+                      ...(formData.content?.camera || {}),
+                      type: e.target.value as 'closeup' | 'medium' | 'full' | 'wide',
+                    },
+                  },
+                })
+              }
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="closeup">特写</option>
+              <option value="medium">中景</option>
+              <option value="full">全景</option>
+              <option value="wide">远景</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">镜头运动</label>
+            <select
+              value={formData.content?.camera?.movement || 'static'}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  content: {
+                    ...(formData.content || {}),
+                    camera: {
+                      ...(formData.content?.camera || {}),
+                      movement: e.target.value as 'static' | 'push' | 'pull' | 'follow',
+                    },
+                  },
+                })
+              }
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="static">静止</option>
+              <option value="push">推进</option>
+              <option value="pull">拉远</option>
+              <option value="follow">跟随</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 视觉效果 */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">视觉效果</h3>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">转场效果</label>
+          <input
+            type="text"
+            value={formData.content?.visual?.transition || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  visual: {
+                    ...(formData.content?.visual || {}),
+                    transition: e.target.value,
+                  },
+                },
+              })
+            }
+            placeholder="例如：淡入淡出、切换、擦除"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">特效</label>
+          <input
+            type="text"
+            value={formData.content?.visual?.effects?.join(', ') || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  visual: {
+                    ...(formData.content?.visual || {}),
+                    effects: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                  },
+                },
+              })
+            }
+            placeholder="多个特效用逗号分隔，例如：模糊, 光晕, 色彩校正"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">字幕样式</label>
+          <input
+            type="text"
+            value={formData.content?.visual?.subtitleStyle || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  visual: {
+                    ...(formData.content?.visual || {}),
+                    subtitleStyle: e.target.value,
+                  },
+                },
+              })
+            }
+            placeholder="例如：底部居中、白色、加粗"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* 音频设置 */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">音频设置</h3>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">背景音乐</label>
+          <input
+            type="text"
+            value={formData.content?.audio?.bgm || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  audio: {
+                    ...(formData.content?.audio || {}),
+                    bgm: e.target.value,
+                  },
+                },
+              })
+            }
+            placeholder="例如：轻快的钢琴曲、紧张的配乐"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">音效</label>
+          <input
+            type="text"
+            value={formData.content?.audio?.soundEffects?.join(', ') || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: {
+                  ...(formData.content || {}),
+                  audio: {
+                    ...(formData.content?.audio || {}),
+                    soundEffects: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                  },
+                },
+              })
+            }
+            placeholder="多个音效用逗号分隔，例如：脚步声, 门铃声, 掌声"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
       <div className="flex justify-end gap-3">
         <button
           type="button"
