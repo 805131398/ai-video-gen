@@ -14,10 +14,52 @@ export default function SceneEditorForm({
   onSave,
   onCancel,
 }: SceneEditorFormProps) {
-  const [formData, setFormData] = useState<ScriptScene>(scene);
+  const [formData, setFormData] = useState<ScriptScene>(() => ({
+    ...scene,
+    content: scene.content || {
+      description: '',
+      sceneType: 'indoor',
+      characters: [],
+      dialogues: [],
+      camera: {
+        type: 'medium',
+        movement: 'static',
+      },
+      visual: {
+        transition: '',
+        effects: [],
+        subtitleStyle: '',
+      },
+      audio: {
+        bgm: '',
+        soundEffects: [],
+      },
+    },
+  }));
 
   useEffect(() => {
-    setFormData(scene);
+    setFormData({
+      ...scene,
+      content: scene.content || {
+        description: '',
+        sceneType: 'indoor',
+        characters: [],
+        dialogues: [],
+        camera: {
+          type: 'medium',
+          movement: 'static',
+        },
+        visual: {
+          transition: '',
+          effects: [],
+          subtitleStyle: '',
+        },
+        audio: {
+          bgm: '',
+          soundEffects: [],
+        },
+      },
+    });
   }, [scene]);
 
   const handleSubmit = (e: React.FormEvent) => {
