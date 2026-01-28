@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, FileText, Edit, Trash2, Users } from 'lucide-react';
 import { getProject, getProjectCharacters } from '../services/project';
-import { getProjectScripts, createScript, deleteScript } from '../services/script';
+import { getProjectScripts, deleteScript } from '../services/script';
 import { Project, ProjectCharacter, ProjectScript } from '../types';
 
 export default function ProjectScripts() {
@@ -13,9 +13,6 @@ export default function ProjectScripts() {
   const [scripts, setScripts] = useState<ProjectScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedCharacterId, setSelectedCharacterId] = useState('');
-  const [creating, setCreating] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -38,26 +35,6 @@ export default function ProjectScripts() {
   useEffect(() => {
     loadData();
   }, [id]);
-
-  const handleCreateScript = async () => {
-    if (!id || !selectedCharacterId) {
-      setError('请选择一个角色');
-      return;
-    }
-    setCreating(true);
-    try {
-      const script = await createScript(id, { characterId: selectedCharacterId });
-      setScripts([...scripts, script]);
-      setShowCreateModal(false);
-      setSelectedCharacterId('');
-      // 跳转到剧本编辑页面
-      navigate(`/projects/${id}/script/${script.id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || '创建剧本失败');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleDeleteScript = async (scriptId: string) => {
     if (!id) return;
@@ -116,7 +93,7 @@ export default function ProjectScripts() {
                 角色管理
               </button>
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => navigate(`/projects/${id}/scripts/new`)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
@@ -236,58 +213,6 @@ export default function ProjectScripts() {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* 创建剧本模态框 */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4">
-              <div className="px-6 py-4 border-b border-slate-200">
-                <h2 className="text-xl font-bold text-slate-900">创建剧本</h2>
-              </div>
-              <div className="p-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  选择角色
-                </label>
-                <select
-                  value={selectedCharacterId}
-                  onChange={(e) => setSelectedCharacterId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">请选择角色</option>
-                  {characters.map((char) => (
-                    <option key={char.id} value={char.id}>
-                      {char.name}
-                    </option>
-                  ))}
-                </select>
-                {characters.length === 0 && (
-                  <p className="text-sm text-amber-600 mt-2">
-                    请先在角色管理中添加角色
-                  </p>
-                )}
-              </div>
-              <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setSelectedCharacterId('');
-                    setError('');
-                  }}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleCreateScript}
-                  disabled={!selectedCharacterId || creating}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
-                >
-                  {creating ? '创建中...' : '创建'}
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>

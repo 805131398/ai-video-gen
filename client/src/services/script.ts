@@ -17,9 +17,10 @@ export const getScript = async (projectId: string, scriptId: string): Promise<Pr
 export const createScript = async (
   projectId: string,
   data: {
-    characterId: string;
-    title?: string;
-    description?: string;
+    name: string;
+    tone?: string;
+    synopsis?: string;
+    characterIds: string[];
   }
 ): Promise<ProjectScript> => {
   const response = await api.post(`/projects/${projectId}/scripts`, data);
@@ -31,9 +32,10 @@ export const updateScript = async (
   projectId: string,
   scriptId: string,
   data: {
-    title?: string;
-    description?: string;
-    isActive?: boolean;
+    name: string;
+    tone?: string;
+    synopsis?: string;
+    characterIds: string[];
   }
 ): Promise<ProjectScript> => {
   const response = await api.put(`/projects/${projectId}/scripts/${scriptId}`, data);
@@ -109,4 +111,30 @@ export const updateScenesOrder = async (
   await api.put(`/projects/${projectId}/scripts/${scriptId}/scenes/reorder`, {
     sceneIds,
   });
+};
+
+// AI 生成脚本大概
+export const generateSynopsis = async (
+  projectId: string,
+  data: {
+    characterIds: string[];
+    tone?: string;
+  }
+): Promise<{ synopsis: string }> => {
+  const response = await api.post(`/projects/${projectId}/scripts/generate-synopsis`, data);
+  return response.data;
+};
+
+// AI 生成场景
+export const generateScenes = async (
+  projectId: string,
+  data: {
+    characterIds: string[];
+    tone?: string;
+    synopsis: string;
+    sceneCount: number;
+  }
+): Promise<{ scenes: Array<{ title: string; duration: number; content: SceneContent }> }> => {
+  const response = await api.post(`/projects/${projectId}/scripts/generate-scenes`, data);
+  return response.data;
 };

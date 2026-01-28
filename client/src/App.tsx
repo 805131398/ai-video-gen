@@ -9,6 +9,7 @@ import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectScripts from './pages/ProjectScripts';
 import ProjectScript from './pages/ProjectScript';
+import ScriptEditor from './pages/ScriptEditor';
 import SceneEdit from './pages/SceneEdit';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
@@ -67,6 +68,8 @@ function App() {
             <Route path="projects/new" element={<ProjectNew />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
             <Route path="projects/:id/scripts" element={<ProjectScripts />} />
+            <Route path="projects/:id/scripts/new" element={<ScriptEditor />} />
+            <Route path="projects/:id/scripts/:scriptId/edit" element={<ScriptEditor />} />
             <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
             <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
             <Route path="activate" element={<Navigate to="/projects" />} />
