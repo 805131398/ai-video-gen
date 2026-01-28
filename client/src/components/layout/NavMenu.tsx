@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Video, BarChart3 } from 'lucide-react';
+import { Video, BarChart3, FolderKanban } from 'lucide-react';
 
 interface NavMenuProps {
   isCollapsed: boolean;
@@ -15,6 +15,12 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
+  {
+    id: 'projects',
+    label: '项目管理',
+    icon: FolderKanban,
+    path: '/projects',
+  },
   {
     id: 'create',
     label: '创建视频',
