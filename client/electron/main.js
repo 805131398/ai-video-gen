@@ -89,7 +89,6 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle('db:deleteProject', async (_, projectId) => {
         const result = (0, database_1.deleteProject)(projectId);
         if (result) {
-            // 同时删除资源文件
             (0, resources_1.deleteProjectResources)(projectId);
         }
         return result;
@@ -165,13 +164,10 @@ function registerIpcHandlers() {
         const download = (0, database_1.getResourceDownload)(resourceType, resourceId);
         if (!download)
             return { success: false, error: 'Download record not found' };
-        // 重置状态为 pending
         (0, database_1.updateResourceDownload)(resourceType, resourceId, {
             status: 'pending',
             errorMessage: null,
         });
-        // 重新下载（需要从原始参数重建）
-        // 这里简化处理，实际应该保存完整的下载参数
         return { success: true };
     });
     // 设置操作
