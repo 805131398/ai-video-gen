@@ -9,6 +9,18 @@ contextBridge.exposeInMainWorld('electron', {
     saveActivationCode: (code: any) => ipcRenderer.invoke('db:saveActivationCode', code),
     getActivationHistory: () => ipcRenderer.invoke('db:getActivationHistory'),
   },
+  // 设置操作
+  settings: {
+    get: (key: string) => ipcRenderer.invoke('settings:get', key),
+    save: (key: string, value: string) => ipcRenderer.invoke('settings:save', key, value),
+  },
+  // 存储管理
+  storage: {
+    selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
+    getDefaultPath: () => ipcRenderer.invoke('storage:getDefaultPath'),
+    calculateSize: (path: string) => ipcRenderer.invoke('storage:calculateSize', path),
+    clearCache: (path: string) => ipcRenderer.invoke('storage:clearCache', path),
+  },
   // 应用控制
   app: {
     minimize: () => ipcRenderer.send('app:minimize'),
