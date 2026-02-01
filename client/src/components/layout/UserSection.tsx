@@ -16,7 +16,7 @@ export default function UserSection({ isCollapsed }: UserSectionProps) {
       onClick={() => navigate('/profile')}
     >
       <div className="flex items-center gap-3">
-        <div className={`${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 transition-all duration-300`}>
+        <div className={`${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 transition-all duration-300`}>
           <User className="w-5 h-5 text-white" />
         </div>
         {!isCollapsed && (

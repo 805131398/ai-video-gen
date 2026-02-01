@@ -4,13 +4,24 @@
 @theme {
   /* SaaS 专业配色方案 */
   --color-primary: #2563EB;
+  --color-primary-foreground: #FFFFFF;
   --color-secondary: #3B82F6;
+  --color-secondary-foreground: #FFFFFF;
   --color-accent: #F97316;
+  --color-accent-foreground: #FFFFFF;
   --color-background: #F8FAFC;
+  --color-foreground: #1E293B;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1E293B;
   --color-surface: #FFFFFF;
   --color-text: #1E293B;
-  --color-text-muted: #475569;
+  --color-muted: #F1F5F9;
+  --color-muted-foreground: #64748B;
   --color-border: #E2E8F0;
+  --color-input: #E2E8F0;
+  --color-ring: #2563EB;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
   --color-error: #EF4444;
   --color-success: #10B981;
 
@@ -57,10 +68,16 @@
 @media (prefers-color-scheme: dark) {
   @theme {
     --color-background: #0F172A;
+    --color-foreground: #F1F5F9;
+    --color-card: #1E293B;
+    --color-card-foreground: #F1F5F9;
     --color-surface: #1E293B;
     --color-text: #F1F5F9;
-    --color-text-muted: #94A3B8;
+    --color-muted: #1E293B;
+    --color-muted-foreground: #94A3B8;
     --color-border: #334155;
+    --color-input: #334155;
+    --color-ring: #3B82F6;
   }
 
   @layer base {

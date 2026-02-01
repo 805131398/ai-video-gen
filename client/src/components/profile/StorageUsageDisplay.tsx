@@ -31,35 +31,35 @@ export default function StorageUsageDisplay() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <div className="p-2 bg-blue-100 rounded">
             <HardDrive className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <p className="text-xs text-slate-500">已使用空间</p>
-            <p className="text-lg font-semibold">
+            <p className="text-lg font-semibold text-slate-900">
               {formatBytes(storageUsage.totalBytes)}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-          <div className="p-2 bg-green-100 rounded">
-            <FileText className="w-5 h-5 text-green-600" />
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="p-2 bg-emerald-100 rounded">
+            <FileText className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
             <p className="text-xs text-slate-500">文件数量</p>
-            <p className="text-lg font-semibold">{storageUsage.fileCount}</p>
+            <p className="text-lg font-semibold text-slate-900">{storageUsage.fileCount}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-          <div className="p-2 bg-purple-100 rounded">
-            <Clock className="w-5 h-5 text-purple-600" />
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="p-2 bg-slate-100 rounded">
+            <Clock className="w-5 h-5 text-slate-600" />
           </div>
           <div>
             <p className="text-xs text-slate-500">最后更新</p>
-            <p className="text-sm font-medium">
+            <p className="text-sm font-medium text-slate-900">
               {formatDate(storageUsage.lastCalculated)}
             </p>
           </div>

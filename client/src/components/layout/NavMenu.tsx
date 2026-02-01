@@ -74,7 +74,7 @@ export default function NavMenu({ isCollapsed }: NavMenuProps) {
                     ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
                     : item.disabled
                     ? 'text-slate-300 cursor-not-allowed'
-                    : 'text-slate-600 hover:bg-gray-100 cursor-pointer'
+                    : 'text-slate-600 hover:bg-slate-50 cursor-pointer'
                   }
                   ${isCollapsed ? 'justify-center' : ''}
                 `}

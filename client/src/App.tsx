@@ -3,7 +3,6 @@ import { Agentation } from 'agentation';
 import { useEffect, useState } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import ProjectManagement from './pages/ProjectManagement';
 import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
@@ -16,6 +15,7 @@ import Profile from './pages/Profile';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
 import { getUserProfile, getSubscriptionStatus } from './services/auth';
+import { Toaster } from './components/ui/toaster';
 
 function App() {
   const { isAuthenticated, login } = useAuthStore();
@@ -65,7 +65,6 @@ function App() {
             element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}
           >
             <Route index element={<Navigate to="/projects" />} />
-            <Route path="dashboard" element={<Dashboard />} />
             <Route path="projects" element={<ProjectManagement />} />
             <Route path="projects/new" element={<ProjectNew />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
@@ -80,6 +79,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <Toaster />
       <Agentation />
     </>
   );
