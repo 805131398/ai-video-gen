@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppSettings from '@/components/profile/AppSettings';
 
 export default function Profile() {
   return (
@@ -25,9 +26,7 @@ export default function Profile() {
         </TabsContent>
 
         <TabsContent value="settings">
-          <div className="p-6 border rounded-lg">
-            <p className="text-slate-500">应用设置 Tab - 待实现</p>
-          </div>
+          <AppSettings />
         </TabsContent>
       </Tabs>
     </div>
