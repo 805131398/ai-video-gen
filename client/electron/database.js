@@ -10,35 +10,6 @@ exports.saveActivationCode = saveActivationCode;
 exports.getActivationHistory = getActivationHistory;
 exports.getSetting = getSetting;
 exports.saveSetting = saveSetting;
-// 项目管理
-exports.saveProject = saveProject;
-exports.getProject = getProject;
-exports.getProjects = getProjects;
-exports.deleteProject = deleteProject;
-// 角色管理
-exports.saveCharacter = saveCharacter;
-exports.getProjectCharacters = getProjectCharacters;
-exports.deleteCharacter = deleteCharacter;
-// 数字人管理
-exports.saveDigitalHuman = saveDigitalHuman;
-exports.getDigitalHumans = getDigitalHumans;
-exports.deleteDigitalHuman = deleteDigitalHuman;
-// 剧本管理
-exports.saveScript = saveScript;
-exports.getProjectScripts = getProjectScripts;
-exports.deleteScript = deleteScript;
-// 场景管理
-exports.saveScene = saveScene;
-exports.getScriptScenes = getScriptScenes;
-exports.deleteScene = deleteScene;
-// 场景视频管理
-exports.saveSceneVideo = saveSceneVideo;
-exports.getSceneVideos = getSceneVideos;
-exports.deleteSceneVideo = deleteSceneVideo;
-// 资源下载管理
-exports.saveResourceDownload = saveResourceDownload;
-exports.getResourceDownload = getResourceDownload;
-exports.updateResourceDownload = updateResourceDownload;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
 const electron_1 = require("electron");

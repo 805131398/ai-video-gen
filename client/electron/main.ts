@@ -1,7 +1,45 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
-import { initDatabase, getUser, saveUser, saveActivationCode, getActivationHistory, getSetting, saveSetting } from './database';
+import {
+  initDatabase,
+  getUser,
+  saveUser,
+  saveActivationCode,
+  getActivationHistory,
+  getSetting,
+  saveSetting,
+  // 项目管理
+  saveProject,
+  getProject,
+  getProjects,
+  deleteProject,
+  // 角色管理
+  saveCharacter,
+  getProjectCharacters,
+  deleteCharacter,
+  // 数字人管理
+  saveDigitalHuman,
+  getDigitalHumans,
+  deleteDigitalHuman,
+  // 剧本管理
+  saveScript,
+  getProjectScripts,
+  deleteScript,
+  // 场景管理
+  saveScene,
+  getScriptScenes,
+  deleteScene,
+  // 场景视频管理
+  saveSceneVideo,
+  getSceneVideos,
+  deleteSceneVideo,
+  // 资源下载管理
+  saveResourceDownload,
+  getResourceDownload,
+  updateResourceDownload,
+} from './database';
+import { downloadResource, deleteProjectResources } from './resources';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -83,6 +121,124 @@ function registerIpcHandlers() {
 
   ipcMain.handle('db:getActivationHistory', async () => {
     return getActivationHistory();
+  });
+
+  // 项目管理
+  ipcMain.handle('db:saveProject', async (_, project: any) => {
+    return saveProject(project);
+  });
+
+  ipcMain.handle('db:getProject', async (_, projectId: string) => {
+    return getProject(projectId);
+  });
+
+  ipcMain.handle('db:getProjects', async () => {
+    return getProjects();
+  });
+
+  ipcMain.handle('db:deleteProject', async (_, projectId: string) => {
+    const result = deleteProject(projectId);
+    if (result) {
+      deleteProjectResources(projectId);
+    }
+    return result;
+  });
+
+  // 角色管理
+  ipcMain.handle('db:saveCharacter', async (_, character: any) => {
+    return saveCharacter(character);
+  });
+
+  ipcMain.handle('db:getProjectCharacters', async (_, projectId: string) => {
+    return getProjectCharacters(projectId);
+  });
+
+  ipcMain.handle('db:deleteCharacter', async (_, characterId: string) => {
+    return deleteCharacter(characterId);
+  });
+
+  // 数字人管理
+  ipcMain.handle('db:saveDigitalHuman', async (_, digitalHuman: any) => {
+    return saveDigitalHuman(digitalHuman);
+  });
+
+  ipcMain.handle('db:getDigitalHumans', async (_, characterId: string) => {
+    return getDigitalHumans(characterId);
+  });
+
+  ipcMain.handle('db:deleteDigitalHuman', async (_, digitalHumanId: string) => {
+    return deleteDigitalHuman(digitalHumanId);
+  });
+
+  // 剧本管理
+  ipcMain.handle('db:saveScript', async (_, script: any) => {
+    return saveScript(script);
+  });
+
+  ipcMain.handle('db:getProjectScripts', async (_, projectId: string) => {
+    return getProjectScripts(projectId);
+  });
+
+  ipcMain.handle('db:deleteScript', async (_, scriptId: string) => {
+    return deleteScript(scriptId);
+  });
+
+  // 场景管理
+  ipcMain.handle('db:saveScene', async (_, scene: any) => {
+    return saveScene(scene);
+  });
+
+  ipcMain.handle('db:getScriptScenes', async (_, scriptId: string) => {
+    return getScriptScenes(scriptId);
+  });
+
+  ipcMain.handle('db:deleteScene', async (_, sceneId: string) => {
+    return deleteScene(sceneId);
+  });
+
+  // 场景视频管理
+  ipcMain.handle('db:saveSceneVideo', async (_, video: any) => {
+    return saveSceneVideo(video);
+  });
+
+  ipcMain.handle('db:getSceneVideos', async (_, sceneId: string) => {
+    return getSceneVideos(sceneId);
+  });
+
+  ipcMain.handle('db:deleteSceneVideo', async (_, videoId: string) => {
+    return deleteSceneVideo(videoId);
+  });
+
+  // 资源下载管理
+  ipcMain.handle('resources:download', async (_, params: any) => {
+    return await downloadResource(params);
+  });
+
+  ipcMain.handle('resources:getStatus', async (_, resourceType: string, resourceId: string) => {
+    const download = getResourceDownload(resourceType, resourceId);
+    if (!download) return null;
+
+    return {
+      status: download.status,
+      progress:
+        download.fileSize && download.downloadedSize
+          ? Math.round((download.downloadedSize / download.fileSize) * 100)
+          : 0,
+      localPath: download.localPath,
+      error: download.errorMessage,
+    };
+  });
+
+  ipcMain.handle('resources:retry', async (_, resourceType: string, resourceId: string) => {
+    const download = getResourceDownload(resourceType, resourceId);
+    if (!download) return { success: false, error: 'Download record not found' };
+
+    updateResourceDownload(resourceType, resourceId, {
+      status: 'pending',
+      errorMessage: null,
+    });
+
+    return { success: true };
   });
 
   // 设置操作
