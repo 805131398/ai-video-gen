@@ -109,6 +109,16 @@ export interface ElectronAPI {
     saveActivationCode: (code: ActivationRecord) => Promise<boolean>;
     getActivationHistory: () => Promise<ActivationRecord[]>;
   };
+  settings: {
+    get: (key: string) => Promise<string | null>;
+    save: (key: string, value: string) => Promise<boolean>;
+  };
+  storage: {
+    selectFolder: () => Promise<string | undefined>;
+    getDefaultPath: () => Promise<string>;
+    calculateSize: (path: string) => Promise<{ bytes: number; count: number }>;
+    clearCache: (path: string) => Promise<{ success: boolean; deletedCount: number }>;
+  };
   app: {
     minimize: () => void;
     maximize: () => void;
@@ -216,5 +226,22 @@ export interface VideoGenerationStatus {
   errorMessage?: string | null;
   videoId?: string | null;
   createdAt?: string | null;
+}
+
+// 存储路径类型
+export type StoragePathType = 'default' | 'documents' | 'downloads' | 'custom';
+
+// 存储配置
+export interface StorageConfig {
+  pathType: StoragePathType;
+  customPath: string;
+  currentPath: string;
+}
+
+// 存储使用情况
+export interface StorageUsage {
+  totalBytes: number;
+  fileCount: number;
+  lastCalculated: Date | null;
 }
 
