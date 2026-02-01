@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Video, BarChart3, FolderKanban } from 'lucide-react';
+import { Video, BarChart3, FolderKanban, Settings } from 'lucide-react';
 
 interface NavMenuProps {
   isCollapsed: boolean;
@@ -36,6 +36,12 @@ const menuItems: MenuItem[] = [
     path: '/stats',
     disabled: true,
     badge: '即将上线',
+  },
+  {
+    id: 'profile',
+    label: '个人中心',
+    icon: Settings,
+    path: '/profile',
   },
 ];
 
