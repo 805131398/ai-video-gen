@@ -1,5 +1,6 @@
 import { Edit2, Trash2, Image as ImageIcon, Sparkles, Check } from 'lucide-react';
 import { ProjectCharacter } from '../../types';
+import ImageWithFallback from '../ImageWithFallback';
 
 interface CharacterCardProps {
   character: ProjectCharacter;
@@ -78,18 +79,20 @@ export default function CharacterCard({
         </label>
         {selectedDigitalHuman ? (
           <div className="relative w-32 h-40 mx-auto">
-            <img
+            <ImageWithFallback
               src={selectedDigitalHuman.imageUrl}
               alt={`${character.name}的数字人`}
               className="w-full h-full object-cover rounded-lg border-2 border-blue-200 shadow-sm"
+              fallbackMessage="数字人图片缓存已失效，请联系管理员处理"
             />
           </div>
         ) : character.avatarUrl ? (
           <div className="w-32 h-40 mx-auto">
-            <img
+            <ImageWithFallback
               src={character.avatarUrl}
               alt={character.name}
               className="w-full h-full object-cover rounded-lg border-2 border-slate-200"
+              fallbackMessage="角色图片缓存已失效，请联系管理员处理"
             />
           </div>
         ) : (
