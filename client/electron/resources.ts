@@ -154,7 +154,9 @@ function downloadFile(
         const redirectUrl = response.headers.location;
         if (redirectUrl) {
           file.close();
-          fs.unlinkSync(dest);
+          if (fs.existsSync(dest)) {
+            fs.unlinkSync(dest);
+          }
           downloadFile(redirectUrl, dest, onProgress)
             .then(resolve)
             .catch(reject);
@@ -164,7 +166,9 @@ function downloadFile(
 
       if (response.statusCode !== 200) {
         file.close();
-        fs.unlinkSync(dest);
+        if (fs.existsSync(dest)) {
+          fs.unlinkSync(dest);
+        }
         reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
         return;
       }

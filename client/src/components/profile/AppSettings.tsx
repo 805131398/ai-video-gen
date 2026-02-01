@@ -127,9 +127,9 @@ export default function AppSettings() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
-          <CardTitle>存储设置</CardTitle>
+          <CardTitle className="text-xl">存储设置</CardTitle>
           <CardDescription>
             配置静态资源(图片、视频)的保存位置
           </CardDescription>
@@ -139,9 +139,9 @@ export default function AppSettings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
-          <CardTitle>存储使用情况</CardTitle>
+          <CardTitle className="text-xl">存储使用情况</CardTitle>
           <CardDescription>
             查看当前存储空间占用
           </CardDescription>
@@ -151,9 +151,9 @@ export default function AppSettings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
-          <CardTitle>清理缓存</CardTitle>
+          <CardTitle className="text-xl">清理缓存</CardTitle>
           <CardDescription>
             删除所有已保存的静态资源文件
           </CardDescription>

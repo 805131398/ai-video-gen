@@ -27,41 +27,60 @@ export default function PersonalInfo() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      {/* 个人信息卡片 */}
+      <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
-          <CardTitle>个人信息</CardTitle>
+          <CardTitle className="text-xl">个人信息</CardTitle>
           <CardDescription>
             查看您的账户基本信息
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* 用户头像和名称 */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-              <User className="w-8 h-8 text-white" />
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <User className="w-10 h-10 text-white" />
             </div>
-            <div>
-              <p className="text-lg font-semibold">{user?.name || user?.username || '未设置'}</p>
-              <p className="text-sm text-slate-500">用户 ID: {user?.id}</p>
+            <div className="flex-1">
+              <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                {user?.name || user?.username || '未设置'}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                用户 ID: {user?.id}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          {/* 联系信息 */}
+          <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
             {user?.email && (
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-slate-400" />
-                <div>
-                  <Label className="text-xs text-slate-500">邮箱</Label>
-                  <p className="text-sm">{user.email}</p>
+              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    邮箱地址
+                  </Label>
+                  <p className="text-sm text-slate-900 dark:text-white mt-1 truncate">
+                    {user.email}
+                  </p>
                 </div>
               </div>
             )}
 
             {user?.phone && (
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-slate-400" />
-                <div>
-                  <Label className="text-xs text-slate-500">手机号</Label>
-                  <p className="text-sm">{user.phone}</p>
+              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    手机号码
+                  </Label>
+                  <p className="text-sm text-slate-900 dark:text-white mt-1">
+                    {user.phone}
+                  </p>
                 </div>
               </div>
             )}
@@ -69,9 +88,10 @@ export default function PersonalInfo() {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* 账户操作卡片 */}
+      <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
-          <CardTitle>账户操作</CardTitle>
+          <CardTitle className="text-xl">账户操作</CardTitle>
           <CardDescription>
             管理您的账户安全
           </CardDescription>
@@ -79,7 +99,10 @@ export default function PersonalInfo() {
         <CardContent>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full">
+              <Button
+                variant="destructive"
+                className="w-full transition-all hover:shadow-lg"
+              >
                 <LogOut className="w-4 h-4 mr-2" />
                 退出登录
               </Button>
