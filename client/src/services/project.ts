@@ -8,40 +8,104 @@ import {
   GenerateCharactersResponse,
   DigitalHuman,
 } from '../types';
+import {
+  syncProjectToLocal,
+  syncCharacterToLocal,
+  syncDigitalHumanToLocal,
+  getProjectFromLocal,
+  getProjectsFromLocal,
+  getCharactersFromLocal,
+  getDigitalHumansFromLocal,
+} from './localDataService';
 
 // 创建项目
 export async function createProject(data: CreateProjectRequest): Promise<Project> {
   const response = await api.post('/projects', data);
-  return response.data;
+  const project = response.data;
+
+  // 同步到本地
+  await syncProjectToLocal(project);
+
+  return project;
 }
 
 // 获取项目详情
 export async function getProject(id: string): Promise<Project> {
+  // 优先从本地获取
+  const localProject = await getProjectFromLocal(id);
+  if (localProject) {
+    return localProject;
+  }
+
+  // 本地没有，从服务端获取
   const response = await api.get(`/projects/${id}`);
-  return response.data;
+  const project = response.data;
+
+  // 同步到本地
+  await syncProjectToLocal(project);
+
+  return project;
 }
 
 // 获取项目列表
 export async function getProjects(): Promise<Project[]> {
+  // 优先从本地获取
+  const localProjects = await getProjectsFromLocal();
+  if (localProjects.length > 0) {
+    return localProjects;
+  }
+
+  // 本地没有，从服务端获取
   const response = await api.get('/projects');
-  return response.data.data || [];
+  const projects = response.data.data || [];
+
+  // 同步到本地
+  for (const project of projects) {
+    await syncProjectToLocal(project);
+  }
+
+  return projects;
 }
 
 // 更新项目
 export async function updateProject(id: string, data: Partial<CreateProjectRequest>): Promise<Project> {
   const response = await api.put(`/projects/${id}`, data);
-  return response.data;
+  const project = response.data;
+
+  // 同步到本地
+  await syncProjectToLocal(project);
+
+  return project;
 }
 
 // 删除项目
 export async function deleteProject(id: string): Promise<void> {
   await api.delete(`/projects/${id}`);
+
+  // 从本地删除
+  if (window.electron?.db) {
+    await window.electron.db.deleteProject(id);
+  }
 }
 
 // 获取项目角色列表
 export async function getProjectCharacters(projectId: string): Promise<ProjectCharacter[]> {
+  // 优先从本地获取
+  const localCharacters = await getCharactersFromLocal(projectId);
+  if (localCharacters.length > 0) {
+    return localCharacters;
+  }
+
+  // 本地没有，从服务端获取
   const response = await api.get(`/projects/${projectId}/characters`);
-  return response.data.data || [];
+  const characters = response.data.data || [];
+
+  // 同步到本地
+  for (const character of characters) {
+    await syncCharacterToLocal(projectId, character);
+  }
+
+  return characters;
 }
 
 // 创建角色
@@ -50,7 +114,12 @@ export async function createCharacter(
   data: CreateCharacterRequest
 ): Promise<ProjectCharacter> {
   const response = await api.post(`/projects/${projectId}/characters`, data);
-  return response.data;
+  const character = response.data;
+
+  // 同步到本地
+  await syncCharacterToLocal(projectId, character);
+
+  return character;
 }
 
 // 更新角色
@@ -60,12 +129,22 @@ export async function updateCharacter(
   data: Partial<CreateCharacterRequest>
 ): Promise<ProjectCharacter> {
   const response = await api.put(`/projects/${projectId}/characters/${characterId}`, data);
-  return response.data;
+  const character = response.data;
+
+  // 同步到本地
+  await syncCharacterToLocal(projectId, character);
+
+  return character;
 }
 
 // 删除角色
 export async function deleteCharacter(projectId: string, characterId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/characters/${characterId}`);
+
+  // 从本地删除
+  if (window.electron?.db) {
+    await window.electron.db.deleteCharacter(characterId);
+  }
 }
 
 // AI 生成角色
@@ -93,8 +172,22 @@ export async function getDigitalHumans(
   projectId: string,
   characterId: string
 ): Promise<DigitalHuman[]> {
+  // 优先从本地获取
+  const localDigitalHumans = await getDigitalHumansFromLocal(characterId);
+  if (localDigitalHumans.length > 0) {
+    return localDigitalHumans;
+  }
+
+  // 本地没有，从服务端获取
   const response = await api.get(`/projects/${projectId}/characters/${characterId}/digital-humans`);
-  return response.data.data || [];
+  const digitalHumans = response.data.data || [];
+
+  // 同步到本地
+  for (const dh of digitalHumans) {
+    await syncDigitalHumanToLocal(projectId, characterId, dh);
+  }
+
+  return digitalHumans;
 }
 
 // 生成数字人（异步）
@@ -120,6 +213,11 @@ export async function selectDigitalHuman(
   const response = await api.put(
     `/projects/${projectId}/characters/${characterId}/digital-humans/${humanId}/select`
   );
-  return response.data.data;
+  const digitalHuman = response.data.data;
+
+  // 同步到本地
+  await syncDigitalHumanToLocal(projectId, characterId, digitalHuman);
+
+  return digitalHuman;
 }
 
