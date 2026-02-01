@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSettingsStore } from '@/store/settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import StoragePathConfig from './StoragePathConfig';
+import StorageUsageDisplay from './StorageUsageDisplay';
 
 export default function AppSettings() {
   const { initializeStorage, isLoading } = useSettingsStore();
@@ -40,7 +41,7 @@ export default function AppSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-slate-500">存储占用显示 - 待实现</p>
+          <StorageUsageDisplay />
         </CardContent>
       </Card>
     </div>
