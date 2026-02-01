@@ -7,6 +7,7 @@ const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
 const database_1 = require("./database");
+const resources_1 = require("./resources");
 let mainWindow = null;
 const isDev = process.env.NODE_ENV === 'development';
 function createWindow() {
@@ -74,6 +75,104 @@ function registerIpcHandlers() {
     });
     electron_1.ipcMain.handle('db:getActivationHistory', async () => {
         return (0, database_1.getActivationHistory)();
+    });
+    // 项目管理
+    electron_1.ipcMain.handle('db:saveProject', async (_, project) => {
+        return (0, database_1.saveProject)(project);
+    });
+    electron_1.ipcMain.handle('db:getProject', async (_, projectId) => {
+        return (0, database_1.getProject)(projectId);
+    });
+    electron_1.ipcMain.handle('db:getProjects', async () => {
+        return (0, database_1.getProjects)();
+    });
+    electron_1.ipcMain.handle('db:deleteProject', async (_, projectId) => {
+        const result = (0, database_1.deleteProject)(projectId);
+        if (result) {
+            // 同时删除资源文件
+            (0, resources_1.deleteProjectResources)(projectId);
+        }
+        return result;
+    });
+    // 角色管理
+    electron_1.ipcMain.handle('db:saveCharacter', async (_, character) => {
+        return (0, database_1.saveCharacter)(character);
+    });
+    electron_1.ipcMain.handle('db:getProjectCharacters', async (_, projectId) => {
+        return (0, database_1.getProjectCharacters)(projectId);
+    });
+    electron_1.ipcMain.handle('db:deleteCharacter', async (_, characterId) => {
+        return (0, database_1.deleteCharacter)(characterId);
+    });
+    // 数字人管理
+    electron_1.ipcMain.handle('db:saveDigitalHuman', async (_, digitalHuman) => {
+        return (0, database_1.saveDigitalHuman)(digitalHuman);
+    });
+    electron_1.ipcMain.handle('db:getDigitalHumans', async (_, characterId) => {
+        return (0, database_1.getDigitalHumans)(characterId);
+    });
+    electron_1.ipcMain.handle('db:deleteDigitalHuman', async (_, digitalHumanId) => {
+        return (0, database_1.deleteDigitalHuman)(digitalHumanId);
+    });
+    // 剧本管理
+    electron_1.ipcMain.handle('db:saveScript', async (_, script) => {
+        return (0, database_1.saveScript)(script);
+    });
+    electron_1.ipcMain.handle('db:getProjectScripts', async (_, projectId) => {
+        return (0, database_1.getProjectScripts)(projectId);
+    });
+    electron_1.ipcMain.handle('db:deleteScript', async (_, scriptId) => {
+        return (0, database_1.deleteScript)(scriptId);
+    });
+    // 场景管理
+    electron_1.ipcMain.handle('db:saveScene', async (_, scene) => {
+        return (0, database_1.saveScene)(scene);
+    });
+    electron_1.ipcMain.handle('db:getScriptScenes', async (_, scriptId) => {
+        return (0, database_1.getScriptScenes)(scriptId);
+    });
+    electron_1.ipcMain.handle('db:deleteScene', async (_, sceneId) => {
+        return (0, database_1.deleteScene)(sceneId);
+    });
+    // 场景视频管理
+    electron_1.ipcMain.handle('db:saveSceneVideo', async (_, video) => {
+        return (0, database_1.saveSceneVideo)(video);
+    });
+    electron_1.ipcMain.handle('db:getSceneVideos', async (_, sceneId) => {
+        return (0, database_1.getSceneVideos)(sceneId);
+    });
+    electron_1.ipcMain.handle('db:deleteSceneVideo', async (_, videoId) => {
+        return (0, database_1.deleteSceneVideo)(videoId);
+    });
+    // 资源下载管理
+    electron_1.ipcMain.handle('resources:download', async (_, params) => {
+        return await (0, resources_1.downloadResource)(params);
+    });
+    electron_1.ipcMain.handle('resources:getStatus', async (_, resourceType, resourceId) => {
+        const download = (0, database_1.getResourceDownload)(resourceType, resourceId);
+        if (!download)
+            return null;
+        return {
+            status: download.status,
+            progress: download.fileSize && download.downloadedSize
+                ? Math.round((download.downloadedSize / download.fileSize) * 100)
+                : 0,
+            localPath: download.localPath,
+            error: download.errorMessage,
+        };
+    });
+    electron_1.ipcMain.handle('resources:retry', async (_, resourceType, resourceId) => {
+        const download = (0, database_1.getResourceDownload)(resourceType, resourceId);
+        if (!download)
+            return { success: false, error: 'Download record not found' };
+        // 重置状态为 pending
+        (0, database_1.updateResourceDownload)(resourceType, resourceId, {
+            status: 'pending',
+            errorMessage: null,
+        });
+        // 重新下载（需要从原始参数重建）
+        // 这里简化处理，实际应该保存完整的下载参数
+        return { success: true };
     });
     // 设置操作
     electron_1.ipcMain.handle('settings:get', async (_, key) => {

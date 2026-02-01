@@ -108,6 +108,36 @@ export interface ElectronAPI {
     saveUser: (user: User) => Promise<boolean>;
     saveActivationCode: (code: ActivationRecord) => Promise<boolean>;
     getActivationHistory: () => Promise<ActivationRecord[]>;
+    // 项目管理
+    saveProject: (project: Project) => Promise<boolean>;
+    getProject: (projectId: string) => Promise<Project | null>;
+    getProjects: () => Promise<Project[]>;
+    deleteProject: (projectId: string) => Promise<boolean>;
+    // 角色管理
+    saveCharacter: (character: ProjectCharacter) => Promise<boolean>;
+    getProjectCharacters: (projectId: string) => Promise<ProjectCharacter[]>;
+    deleteCharacter: (characterId: string) => Promise<boolean>;
+    // 数字人管理
+    saveDigitalHuman: (digitalHuman: DigitalHuman) => Promise<boolean>;
+    getDigitalHumans: (characterId: string) => Promise<DigitalHuman[]>;
+    deleteDigitalHuman: (digitalHumanId: string) => Promise<boolean>;
+    // 剧本管理
+    saveScript: (script: ProjectScript) => Promise<boolean>;
+    getProjectScripts: (projectId: string) => Promise<ProjectScript[]>;
+    deleteScript: (scriptId: string) => Promise<boolean>;
+    // 场景管理
+    saveScene: (scene: ScriptScene) => Promise<boolean>;
+    getScriptScenes: (scriptId: string) => Promise<ScriptScene[]>;
+    deleteScene: (sceneId: string) => Promise<boolean>;
+    // 场景视频管理
+    saveSceneVideo: (video: SceneVideo) => Promise<boolean>;
+    getSceneVideos: (sceneId: string) => Promise<SceneVideo[]>;
+    deleteSceneVideo: (videoId: string) => Promise<boolean>;
+  };
+  resources: {
+    download: (params: DownloadResourceParams) => Promise<DownloadResult>;
+    getStatus: (resourceType: string, resourceId: string) => Promise<ResourceDownloadStatus | null>;
+    retry: (resourceType: string, resourceId: string) => Promise<DownloadResult>;
   };
   settings: {
     get: (key: string) => Promise<string | null>;
@@ -124,6 +154,31 @@ export interface ElectronAPI {
     maximize: () => void;
     close: () => void;
   };
+}
+
+// 资源下载参数
+export interface DownloadResourceParams {
+  url: string;
+  resourceType: 'character_avatar' | 'digital_human' | 'scene_video' | 'video_thumbnail';
+  resourceId: string;
+  projectId: string;
+  characterId?: string;
+  sceneId?: string;
+}
+
+// 下载结果
+export interface DownloadResult {
+  success: boolean;
+  localPath?: string;
+  error?: string;
+}
+
+// 资源下载状态
+export interface ResourceDownloadStatus {
+  status: 'pending' | 'downloading' | 'completed' | 'failed';
+  progress?: number;
+  localPath?: string;
+  error?: string;
 }
 
 // 扩展 Window 接口
