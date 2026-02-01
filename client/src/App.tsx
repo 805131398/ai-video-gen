@@ -12,6 +12,7 @@ import ProjectScript from './pages/ProjectScript';
 import ScriptEditor from './pages/ScriptEditor';
 import SceneEdit from './pages/SceneEdit';
 import SceneVideos from './pages/SceneVideos';
+import Profile from './pages/Profile';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
 import { getUserProfile, getSubscriptionStatus } from './services/auth';
@@ -74,6 +75,7 @@ function App() {
             <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
             <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
             <Route path="projects/:id/script/:scriptId/scenes/:sceneId/videos" element={<SceneVideos />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="activate" element={<Navigate to="/projects" />} />
           </Route>
         </Routes>
