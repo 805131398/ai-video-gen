@@ -67,6 +67,15 @@ function createTables() {
     )
   `);
 
+  // 应用设置表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   console.log('Database tables created successfully');
 }
 
@@ -118,4 +127,28 @@ export function getActivationHistory() {
 
   const stmt = db.prepare('SELECT * FROM activation_records ORDER BY created_at DESC');
   return stmt.all();
+}
+
+// 获取设置
+export function getSetting(key: string) {
+  if (!db) return null;
+  const stmt = db.prepare('SELECT value FROM app_settings WHERE key = ?');
+  const row = stmt.get(key) as { value: string } | undefined;
+  return row?.value || null;
+}
+
+// 保存设置
+export function saveSetting(key: string, value: string) {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `);
+    stmt.run(key, value);
+    return true;
+  } catch (error) {
+    console.error('Error saving setting:', error);
+    return false;
+  }
 }

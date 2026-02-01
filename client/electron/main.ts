@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import { initDatabase, getUser, saveUser, saveActivationCode, getActivationHistory } from './database';
+import { initDatabase, getUser, saveUser, saveActivationCode, getActivationHistory, getSetting, saveSetting } from './database';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -82,6 +82,15 @@ function registerIpcHandlers() {
 
   ipcMain.handle('db:getActivationHistory', async () => {
     return getActivationHistory();
+  });
+
+  // 设置操作
+  ipcMain.handle('settings:get', async (_, key: string) => {
+    return getSetting(key);
+  });
+
+  ipcMain.handle('settings:save', async (_, key: string, value: string) => {
+    return saveSetting(key, value);
   });
 
   // 应用控制
