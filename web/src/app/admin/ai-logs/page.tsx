@@ -578,23 +578,24 @@ export default function AILogsPage() {
       {/* Detail Sheet */}
       <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <SheetContent className="!max-w-3xl !w-[60vw] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              日志详情
+              {selectedLog && getStatusBadge(selectedLog.status)}
+            </SheetTitle>
+            {selectedLog && (
+              <SheetDescription className="font-mono text-xs">
+                {selectedLog.id}
+              </SheetDescription>
+            )}
+          </SheetHeader>
+
           {isDetailLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-slate-500">加载中...</div>
             </div>
           ) : selectedLog ? (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  日志详情
-                  {getStatusBadge(selectedLog.status)}
-                </SheetTitle>
-                <SheetDescription className="font-mono text-xs">
-                  {selectedLog.id}
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6">
+            <div className="mt-6 space-y-6">
                 {/* Basic Info */}
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 mb-3">
@@ -756,7 +757,7 @@ export default function AILogsPage() {
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ) : null}
         </SheetContent>
       </Sheet>
