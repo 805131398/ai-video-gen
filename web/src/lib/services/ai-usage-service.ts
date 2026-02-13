@@ -14,6 +14,9 @@ interface LogAIUsageParams {
   status: AILogStatus;
   errorMessage?: string;
   taskId?: string;
+  requestUrl?: string;      // 新增
+  requestBody?: any;        // 新增
+  responseBody?: any;       // 新增
 }
 
 /**
@@ -35,6 +38,9 @@ export async function logAIUsage(params: LogAIUsageParams) {
         status: params.status,
         errorMessage: params.errorMessage,
         taskId: params.taskId,
+        requestUrl: params.requestUrl,         // 新增
+        requestBody: params.requestBody,       // 新增
+        responseBody: params.responseBody,     // 新增
       },
     });
     return log;
@@ -74,12 +80,19 @@ export function estimateCost(
  */
 export async function withUsageLogging<T>(
   params: Omit<LogAIUsageParams, "latencyMs" | "status" | "errorMessage">,
-  fn: () => Promise<{ result: T; inputTokens?: number; outputTokens?: number }>
+  fn: () => Promise<{
+    result: T;
+    inputTokens?: number;
+    outputTokens?: number;
+    requestUrl?: string;      // 新增
+    requestBody?: any;        // 新增
+    responseBody?: any;       // 新增
+  }>
 ): Promise<T> {
   const startTime = Date.now();
 
   try {
-    const { result, inputTokens, outputTokens } = await fn();
+    const { result, inputTokens, outputTokens, requestUrl, requestBody, responseBody } = await fn();
     const latencyMs = Date.now() - startTime;
 
     const cost = estimateCost(
@@ -95,6 +108,9 @@ export async function withUsageLogging<T>(
       cost,
       latencyMs,
       status: "SUCCESS",
+      requestUrl,          // 新增
+      requestBody,         // 新增
+      responseBody,        // 新增
     });
 
     return result;
