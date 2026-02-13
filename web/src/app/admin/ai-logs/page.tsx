@@ -107,7 +107,7 @@ export default function AILogsPage() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [isLoading, setIsLoading] = useState(true);
 
   // Detail drawer state
@@ -212,6 +212,11 @@ export default function AILogsPage() {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  // Reset to page 1 when pageSize changes
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   // Debounced search
   useEffect(() => {
@@ -560,7 +565,10 @@ export default function AILogsPage() {
               <Pagination
                 currentPage={page}
                 totalPages={Math.ceil(total / pageSize)}
+                pageSize={pageSize}
+                totalItems={total}
                 onPageChange={setPage}
+                onPageSizeChange={setPageSize}
               />
             </div>
           )}
