@@ -3,7 +3,15 @@ import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { createAIClient } from "@/lib/ai/client";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { withUsageLogging } from "@/lib/services/ai-usage-service";
 import { AIModelType } from "@/generated/prisma/enums";
+
+// Token 估算辅助函数
+function estimateTokenCount(text: string): number {
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+  return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+}
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -83,14 +91,35 @@ ${themeDesc ? `主题描述：${themeDesc}\n` : ""}
 
 请生成该角色的详细描述：`;
 
-    // 调用 AI 生成
-    const client = createAIClient(config);
-    const description = await client.generateText(prompt, systemPrompt, {
-      temperature: 0.7,
-    });
+    // 调用 AI 生成（带日志记录）
+    const description = await withUsageLogging(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        projectId: projectId,
+        modelType: "TEXT",
+        modelConfigId: config.id,
+        taskId: `character-desc-${Date.now()}`,
+      },
+      async () => {
+        const client = createAIClient(config);
+        const result = await client.generateText(prompt, systemPrompt, {
+          temperature: 0.7,
+        });
+
+        return {
+          result: result.trim(),
+          inputTokens: estimateTokenCount(prompt + systemPrompt),
+          outputTokens: estimateTokenCount(result),
+          requestUrl: config.apiUrl,
+          requestBody: { characterName, prompt, systemPrompt },
+          responseBody: { description: result.trim() },
+        };
+      }
+    );
 
     return NextResponse.json({
-      description: description.trim(),
+      description,
     });
   } catch (error) {
     console.error("AI 生成角色描述失败:", error);
