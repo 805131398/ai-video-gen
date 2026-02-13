@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StepStatus } from "@/generated/prisma/enums";
 import { generateSingleImage, generateImagePromptFromCopy } from "@/lib/ai/image-generator";
+import { logAIUsage } from "@/lib/services/ai-usage-service";
+import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { AIModelType } from "@prisma/client";
 import { randomUUID } from "crypto";
 
 // 存储正在进行的任务（内存中，用于取消功能）
@@ -94,6 +97,8 @@ export async function POST(
       copyContent,
       count,
       session.user.id,
+      session.user.tenantId,
+      projectId,
       imageStep.id,
       baseSortOrder,
       batchId,
@@ -171,6 +176,8 @@ async function generateImagesAsync(
   copyContent: string,
   count: number,
   userId: string,
+  tenantId: string,
+  projectId: string,
   stepId: string,
   baseSortOrder: number,
   batchId: string,
@@ -181,6 +188,9 @@ async function generateImagesAsync(
   const overallStartTime = Date.now();
 
   try {
+    // 获取 AI 配置（用于日志记录）
+    const config = await getEffectiveAIConfig(AIModelType.IMAGE, userId, tenantId);
+
     // 检查任务是否已取消
     const task = runningTasks.get(batchId);
     if (task?.cancelled) {
@@ -246,10 +256,52 @@ async function generateImagesAsync(
           });
           const imageElapsed = Date.now() - imageStartTime;
           console.log(`[images/generate] 第 ${i + 1}/${count} 张图片已保存，耗时: ${imageElapsed}ms`);
+
+          // 记录成功日志
+          if (config) {
+            await logAIUsage({
+              tenantId,
+              userId,
+              projectId,
+              modelType: "IMAGE",
+              modelConfigId: config.id,
+              inputTokens: imagePrompt.length,
+              outputTokens: 1, // 生成 1 张图
+              cost: 0.02, // 根据模型调整
+              latencyMs: imageElapsed,
+              status: "SUCCESS",
+              taskId: `image-${batchId}-${i}`,
+              requestUrl: config.apiUrl,
+              requestBody: { prompt: imagePrompt },
+              responseBody: { imageUrl: image.imageUrl },
+            });
+          }
+
           return image;
         }
       } catch (error) {
         console.error(`[images/generate] 第 ${i + 1}/${count} 张生成失败:`, error);
+
+        // 记录失败日志
+        if (config) {
+          await logAIUsage({
+            tenantId,
+            userId,
+            projectId,
+            modelType: "IMAGE",
+            modelConfigId: config.id,
+            inputTokens: imagePrompt.length,
+            outputTokens: 0,
+            cost: 0,
+            latencyMs: Date.now() - imageStartTime,
+            status: "FAILED",
+            errorMessage: error instanceof Error ? error.message : "Unknown error",
+            taskId: `image-${batchId}-${i}`,
+            requestUrl: config.apiUrl,
+            requestBody: { prompt: imagePrompt },
+          });
+        }
+
         return null;
       }
       return null;
