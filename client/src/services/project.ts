@@ -23,8 +23,22 @@ export async function createProject(data: CreateProjectRequest): Promise<Project
   const response = await api.post('/projects', data);
   const project = response.data;
 
-  // 同步到本地
-  await syncProjectToLocal(project);
+  // POST 只返回 { id }，补充必要字段后再同步到本地
+  if (project.id && window.electron?.db) {
+    const fullProject: Project = {
+      id: project.id,
+      userId: '',
+      topic: data.topic || '',
+      title: data.title || null,
+      status: 'DRAFT',
+      currentStep: 'TOPIC_INPUT',
+      themeName: data.themeName || null,
+      themeDesc: data.themeDesc || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await syncProjectToLocal(fullProject);
+  }
 
   return project;
 }
@@ -70,10 +84,12 @@ export async function getProjects(): Promise<Project[]> {
 // 更新项目
 export async function updateProject(id: string, data: Partial<CreateProjectRequest>): Promise<Project> {
   const response = await api.put(`/projects/${id}`, data);
-  const project = response.data;
+  const project = response.data?.data || response.data;
 
-  // 同步到本地
-  await syncProjectToLocal(project);
+  // PUT 返回的 Prisma 对象可能没有 currentStep，同步时提供默认值
+  if (window.electron?.db) {
+    await syncProjectToLocal(project);
+  }
 
   return project;
 }
@@ -170,15 +186,18 @@ export async function generateCharacterDescription(
 // 获取数字人列表
 export async function getDigitalHumans(
   projectId: string,
-  characterId: string
+  characterId: string,
+  forceRemote: boolean = false
 ): Promise<DigitalHuman[]> {
-  // 优先从本地获取
-  const localDigitalHumans = await getDigitalHumansFromLocal(characterId);
-  if (localDigitalHumans.length > 0) {
-    return localDigitalHumans;
+  // 优先从本地获取（除非强制从服务端获取）
+  if (!forceRemote) {
+    const localDigitalHumans = await getDigitalHumansFromLocal(characterId);
+    if (localDigitalHumans.length > 0) {
+      return localDigitalHumans;
+    }
   }
 
-  // 本地没有，从服务端获取
+  // 从服务端获取
   const response = await api.get(`/projects/${projectId}/characters/${characterId}/digital-humans`);
   const digitalHumans = response.data.data || [];
 

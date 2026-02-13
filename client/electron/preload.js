@@ -34,12 +34,17 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         saveSceneVideo: (video) => electron_1.ipcRenderer.invoke('db:saveSceneVideo', video),
         getSceneVideos: (sceneId) => electron_1.ipcRenderer.invoke('db:getSceneVideos', sceneId),
         deleteSceneVideo: (videoId) => electron_1.ipcRenderer.invoke('db:deleteSceneVideo', videoId),
+        // 生成快照管理
+        saveGenerationSnapshot: (snapshot) => electron_1.ipcRenderer.invoke('db:saveGenerationSnapshot', snapshot),
+        getGenerationSnapshots: (sceneId) => electron_1.ipcRenderer.invoke('db:getGenerationSnapshots', sceneId),
     },
     // 资源管理
     resources: {
         download: (params) => electron_1.ipcRenderer.invoke('resources:download', params),
         getStatus: (resourceType, resourceId) => electron_1.ipcRenderer.invoke('resources:getStatus', resourceType, resourceId),
         retry: (resourceType, resourceId) => electron_1.ipcRenderer.invoke('resources:retry', resourceType, resourceId),
+        getRootPath: () => electron_1.ipcRenderer.invoke('resources:getRootPath'),
+        openFolder: () => electron_1.ipcRenderer.invoke('resources:openFolder'),
     },
     // 设置操作
     settings: {

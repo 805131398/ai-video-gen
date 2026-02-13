@@ -272,6 +272,7 @@ export default function ProjectScriptPage() {
         {activeTab === 'timeline' && (
           <TimelineView
             scenes={scenes}
+            videoStatuses={videoStatuses}
             onEditScene={handleEditScene}
           />
         )}

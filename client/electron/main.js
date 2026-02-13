@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,10 +39,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
+const fs_1 = __importDefault(require("fs"));
 const database_1 = require("./database");
 const resources_1 = require("./resources");
 let mainWindow = null;
 const isDev = process.env.NODE_ENV === 'development';
+// 注册自定义协议 scheme（必须在 app.whenReady 之前调用）
+electron_1.protocol.registerSchemesAsPrivileged([{
+        scheme: 'local-resource',
+        privileges: {
+            secure: true,
+            supportFetchAPI: true,
+            bypassCSP: true,
+            corsEnabled: true,
+            stream: true,
+        }
+    }]);
 function createWindow() {
     // 设置图标路径
     const iconPath = isDev
@@ -45,6 +90,12 @@ function createWindow() {
 electron_1.app.whenReady().then(() => {
     // 初始化数据库
     (0, database_1.initDatabase)();
+    // 注册自定义协议处理器，用于加载本地资源文件
+    electron_1.protocol.handle('local-resource', (request) => {
+        // URL 格式: local-resource:///path/to/file
+        const filePath = decodeURIComponent(request.url.slice('local-resource://'.length));
+        return electron_1.net.fetch(`file://${filePath}`);
+    });
     // 创建窗口
     createWindow();
     // 注册 IPC 处理器
@@ -143,6 +194,13 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle('db:deleteSceneVideo', async (_, videoId) => {
         return (0, database_1.deleteSceneVideo)(videoId);
     });
+    // 生成快照管理
+    electron_1.ipcMain.handle('db:saveGenerationSnapshot', async (_, snapshot) => {
+        return (0, database_1.saveGenerationSnapshot)(snapshot);
+    });
+    electron_1.ipcMain.handle('db:getGenerationSnapshots', async (_, sceneId) => {
+        return (0, database_1.getGenerationSnapshots)(sceneId);
+    });
     // 资源下载管理
     electron_1.ipcMain.handle('resources:download', async (_, params) => {
         return await (0, resources_1.downloadResource)(params);
@@ -169,6 +227,37 @@ function registerIpcHandlers() {
             errorMessage: null,
         });
         return { success: true };
+    });
+    // 获取资源根目录路径
+    electron_1.ipcMain.handle('resources:getRootPath', async () => {
+        const userDataPath = electron_1.app.getPath('userData');
+        const resourcesRoot = path_1.default.join(userDataPath, 'resources');
+        return {
+            userDataPath,
+            resourcesRoot,
+        };
+    });
+    // 打开资源文件夹
+    electron_1.ipcMain.handle('resources:openFolder', async () => {
+        const { getSetting } = await Promise.resolve().then(() => __importStar(require('./database')));
+        // 尝试从设置中读取路径配置
+        const pathType = getSetting('storage_path_type');
+        const customPath = getSetting('storage_custom_path');
+        // 确定实际路径
+        let resourcesRoot;
+        if (pathType === 'custom' && customPath) {
+            resourcesRoot = customPath;
+        }
+        else {
+            resourcesRoot = path_1.default.join(electron_1.app.getPath('userData'), 'resources');
+        }
+        // 确保目录存在
+        if (!fs_1.default.existsSync(resourcesRoot)) {
+            await promises_1.default.mkdir(resourcesRoot, { recursive: true });
+        }
+        // 打开文件夹
+        await electron_1.shell.openPath(resourcesRoot);
+        return { success: true, path: resourcesRoot };
     });
     // 设置操作
     electron_1.ipcMain.handle('settings:get', async (_, key) => {

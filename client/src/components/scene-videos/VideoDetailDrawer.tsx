@@ -1,6 +1,7 @@
-import { X, Check, Trash2, RefreshCw, Loader2, Play, Pause } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { X, Check, Trash2, RefreshCw, Loader2, Play, Pause, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { SceneVideo } from '../../types';
+import ImageWithFallback from '../ImageWithFallback';
 
 interface VideoDetailDrawerProps {
   isOpen: boolean;
@@ -24,7 +25,31 @@ export default function VideoDetailDrawer({
   deletingVideoId,
 }: VideoDetailDrawerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [localImageUrl, setLocalImageUrl] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // 解析数字人图片本地路径
+  const metadata = video?.metadata || {};
+  useEffect(() => {
+    const digitalHumanId = metadata.digitalHumanId as string | undefined;
+    if (!digitalHumanId) {
+      setLocalImageUrl((metadata.referenceImage as string) || '');
+      return;
+    }
+    const resolve = async () => {
+      try {
+        const status = await window.electron.resources.getStatus('digital_human', digitalHumanId);
+        if (status && status.status === 'completed' && status.localPath) {
+          setLocalImageUrl(`local-resource://${status.localPath}`);
+        } else {
+          setLocalImageUrl((metadata.referenceImage as string) || '');
+        }
+      } catch {
+        setLocalImageUrl((metadata.referenceImage as string) || '');
+      }
+    };
+    resolve();
+  }, [metadata.digitalHumanId, metadata.referenceImage]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -59,14 +84,31 @@ export default function VideoDetailDrawer({
     switch (type) {
       case 'smart_combine':
         return '智能组合';
+      case 'smart_combine_storyboard':
+        return '智能组合 (故事板)';
       case 'ai_optimized':
         return 'AI优化';
+      case 'ai_optimized_storyboard':
+        return 'AI优化 (故事板)';
       default:
         return type;
     }
   };
 
+  const getImageSourceLabel = (source: string) => {
+    switch (source) {
+      case 'digital_human':
+        return '数字人形象';
+      case 'avatar':
+        return '角色头像';
+      default:
+        return source;
+    }
+  };
+
   if (!isOpen || !video) return null;
+
+  const hasCharacterInfo = metadata.useCharacterImage && (metadata.characterName || metadata.referenceImage);
 
   return (
     <>
@@ -124,6 +166,40 @@ export default function VideoDetailDrawer({
             )}
           </div>
 
+          {/* 角色 & 数字人信息 */}
+          {hasCharacterInfo && (
+            <div className="bg-purple-50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-purple-900 mb-3">参考形象</h3>
+              <div className="flex items-start gap-3">
+                {localImageUrl ? (
+                  <ImageWithFallback
+                    src={localImageUrl}
+                    alt="参考形象"
+                    className="w-16 h-16 rounded-lg object-cover border border-purple-200 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <User className="w-8 h-8 text-purple-300" />
+                  </div>
+                )}
+                <div className="space-y-1.5 text-sm min-w-0">
+                  {metadata.characterName && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-600 font-medium">
+                        {metadata.characterName as string}
+                      </span>
+                    </div>
+                  )}
+                  {metadata.imageSource && (
+                    <div className="text-purple-500 text-xs">
+                      来源: {getImageSourceLabel(metadata.imageSource as string)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 基本信息 */}
           <div className="bg-slate-50 rounded-lg p-4">
             <h3 className="text-sm font-medium text-slate-900 mb-3">基本信息</h3>
@@ -145,7 +221,7 @@ export default function VideoDetailDrawer({
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">已选中</span>
                 <span className={video.isSelected ? 'text-green-600' : 'text-slate-400'}>
-                  {video.isSelected ? '✓ 是' : '否'}
+                  {video.isSelected ? '是' : '否'}
                 </span>
               </div>
             </div>
@@ -159,30 +235,26 @@ export default function VideoDetailDrawer({
                 <span className="text-slate-500">提示词类型</span>
                 <span className="text-slate-900">{getPromptTypeLabel(video.promptType)}</span>
               </div>
-              {video.metadata && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">故事板格式</span>
-                    <span className="text-slate-900">
-                      {video.metadata.useStoryboard ? '是' : '否'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">角色形象</span>
-                    <span className="text-slate-900">
-                      {video.metadata.useCharacterImage ? '是' : '否'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">宽高比</span>
-                    <span className="text-slate-900">{video.metadata.aspectRatio || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">高清</span>
-                    <span className="text-slate-900">{video.metadata.hd ? '是' : '否'}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">生成模式</span>
+                <span className="text-slate-900">
+                  {metadata.mode === 'storyboard' ? '故事板' : '普通'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">角色形象</span>
+                <span className="text-slate-900">
+                  {metadata.useCharacterImage ? '是' : '否'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">宽高比</span>
+                <span className="text-slate-900">{(metadata.aspectRatio as string) || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">高清</span>
+                <span className="text-slate-900">{metadata.hd ? '是' : '否'}</span>
+              </div>
             </div>
           </div>
 

@@ -28,7 +28,7 @@ export default function Login() {
 
       // 跳转
       if (subscription.is_active) {
-        navigate('/dashboard');
+        navigate('/projects');
       } else {
         navigate('/activate');
       }

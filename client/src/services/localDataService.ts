@@ -6,6 +6,7 @@ import {
   ScriptScene,
   SceneVideo,
   DownloadResourceParams,
+  GenerationSnapshot,
 } from '../types';
 
 /**
@@ -20,13 +21,24 @@ import {
  */
 export async function syncProjectToLocal(project: Project): Promise<boolean> {
   try {
+    // 从 versions 中提取 currentStep（项目列表 API 返回的数据结构）
+    const projectData: any = { ...project };
+    if (!projectData.currentStep && (project as any).versions?.length > 0) {
+      projectData.currentStep = (project as any).versions[0].currentStep;
+    }
+
     // 保存项目基本信息
-    await window.electron.db.saveProject(project);
+    await window.electron.db.saveProject(projectData);
 
     // 如果有角色，同步角色数据
     if (project.characters && project.characters.length > 0) {
       for (const character of project.characters) {
-        await syncCharacterToLocal(project.id, character);
+        // 确保角色有 projectId（从 ProjectPageResponse 返回的角色可能没有）
+        const charWithProjectId = {
+          ...character,
+          projectId: character.projectId || project.id,
+        };
+        await syncCharacterToLocal(project.id, charWithProjectId);
       }
     }
 
@@ -304,6 +316,34 @@ export async function getSceneVideosFromLocal(sceneId: string): Promise<SceneVid
 
 // ==================== 资源下载管理 ====================
 
+// ==================== 生成快照管理 ====================
+
+/**
+ * 保存生成操作快照到本地
+ */
+export async function saveGenerationSnapshot(snapshot: GenerationSnapshot): Promise<boolean> {
+  try {
+    return await window.electron.db.saveGenerationSnapshot(snapshot);
+  } catch (error) {
+    console.error('Error saving generation snapshot:', error);
+    return false;
+  }
+}
+
+/**
+ * 获取场景的生成快照列表
+ */
+export async function getGenerationSnapshots(sceneId: string): Promise<GenerationSnapshot[]> {
+  try {
+    return await window.electron.db.getGenerationSnapshots(sceneId);
+  } catch (error) {
+    console.error('Error getting generation snapshots:', error);
+    return [];
+  }
+}
+
+// ==================== 资源下载管理（续） ====================
+
 /**
  * 后台下载资源（不阻塞）
  */
@@ -380,7 +420,7 @@ export async function retryResourceDownload(
 export function getLocalResourceUrl(localPath: string | null, remoteUrl: string): string {
   // 优先使用本地路径
   if (localPath) {
-    return `file://${localPath}`;
+    return `local-resource://${localPath}`;
   }
 
   // 降级使用远程 URL

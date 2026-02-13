@@ -14,6 +14,7 @@ interface GenerateSceneVideoRequest {
   hd?: boolean; // 是否高清
   useStoryboard?: boolean; // 是否使用故事板格式
   useCharacterImage?: boolean; // 是否使用角色形象作为参考图（仅当 useStoryboard=true 时有效）
+  customPrompt?: string; // 用户编辑后的提示词（如果传了则直接使用）
 }
 
 /**
@@ -87,17 +88,31 @@ export async function POST(
     // 4. 构建 prompt
     let prompt: string;
     let finalReferenceImage: string | undefined = body.referenceImage;
+    let characterImageInfo: CharacterImageResult = {};
 
-    if (useStoryboard) {
+    if (body.customPrompt) {
+      // 用户提供了自定义提示词，直接使用
+      prompt = body.customPrompt;
+
+      // 仍然需要获取角色形象作为参考图
+      if (useCharacterImage && !finalReferenceImage) {
+        characterImageInfo = await getCharacterImage(
+          scene,
+          scene.script.project.characters
+        );
+        finalReferenceImage = characterImageInfo.imageUrl;
+      }
+    } else if (useStoryboard) {
       // 使用故事板格式（传入计算后的时长）
       prompt = buildSceneStoryboardPrompt(scene, finalDuration);
 
       // 如果启用了角色形象，自动获取
       if (useCharacterImage && !finalReferenceImage) {
-        finalReferenceImage = await getCharacterImage(
+        characterImageInfo = await getCharacterImage(
           scene,
           scene.script.project.characters
         );
+        finalReferenceImage = characterImageInfo.imageUrl;
       }
     } else {
       // 使用普通格式
@@ -105,14 +120,17 @@ export async function POST(
         type: promptType,
         scene,
         characters: scene.script.project.characters,
+        userId: user.id,
+        tenantId: user.tenantId,
       });
 
       // 单独生成模式也支持角色形象
       if (useCharacterImage && !finalReferenceImage) {
-        finalReferenceImage = await getCharacterImage(
+        characterImageInfo = await getCharacterImage(
           scene,
           scene.script.project.characters
         );
+        finalReferenceImage = characterImageInfo.imageUrl;
       }
     }
 
@@ -133,13 +151,17 @@ export async function POST(
         prompt,
         promptType: useStoryboard ? `${promptType}_storyboard` : promptType,
         status: "pending",
-        metadata: useStoryboard
-          ? {
-              mode: "storyboard",
-              useCharacterImage,
-              referenceImage: finalReferenceImage,
-            }
-          : {},
+        metadata: {
+          mode: useStoryboard ? "storyboard" : "normal",
+          useCharacterImage,
+          referenceImage: finalReferenceImage,
+          characterId: characterImageInfo.characterId,
+          characterName: characterImageInfo.characterName,
+          digitalHumanId: characterImageInfo.digitalHumanId,
+          imageSource: characterImageInfo.source,
+          aspectRatio: body.aspectRatio || "16:9",
+          hd: body.hd || false,
+        },
       },
     });
 
@@ -256,12 +278,23 @@ function buildSceneStoryboardPrompt(scene: any, finalDuration: number): string {
 }
 
 /**
- * 获取场景主要角色的数字人形象
+ * 角色形象查询结果
+ */
+interface CharacterImageResult {
+  imageUrl?: string;
+  characterId?: string;
+  characterName?: string;
+  digitalHumanId?: string;
+  source?: "digital_human" | "avatar" | undefined;
+}
+
+/**
+ * 获取场景主要角色的数字人形象及关联信息
  */
 async function getCharacterImage(
   scene: any,
   characters: any[]
-): Promise<string | undefined> {
+): Promise<CharacterImageResult> {
   const content = scene.content as any;
   const characterId = content.characterId;
 
@@ -274,14 +307,14 @@ async function getCharacterImage(
 
   if (!characterId) {
     console.log("[getCharacterImage] 场景没有关联角色");
-    return undefined;
+    return {};
   }
 
   // 查找角色
   const character = characters.find((c: any) => c.id === characterId);
   if (!character) {
     console.log("[getCharacterImage] 未找到角色:", characterId);
-    return undefined;
+    return {};
   }
 
   console.log("[getCharacterImage] 找到角色:", {
@@ -297,6 +330,7 @@ async function getCharacterImage(
   console.log("[getCharacterImage] 选中的数字人ID:", selectedDigitalHumanId);
 
   let digitalHumanImageUrl: string | undefined;
+  let usedDigitalHumanId: string | undefined;
 
   if (selectedDigitalHumanId) {
     // 根据 ID 查询数字人形象
@@ -312,6 +346,9 @@ async function getCharacterImage(
     });
 
     digitalHumanImageUrl = digitalHuman?.imageUrl;
+    if (digitalHuman) {
+      usedDigitalHumanId = digitalHuman.id;
+    }
   } else {
     // 如果没有选中的，查询该角色的第一个数字人
     const firstDigitalHuman = await prisma.digitalHuman.findFirst({
@@ -329,15 +366,35 @@ async function getCharacterImage(
     });
 
     digitalHumanImageUrl = firstDigitalHuman?.imageUrl;
+    if (firstDigitalHuman) {
+      usedDigitalHumanId = firstDigitalHuman.id;
+    }
   }
 
-  console.log("[getCharacterImage] 数字人形象查询结果:", {
-    found: !!digitalHumanImageUrl,
-    imageUrl: digitalHumanImageUrl,
+  // 确定最终使用的图片和来源
+  let finalImageUrl: string | undefined;
+  let source: "digital_human" | "avatar" | undefined;
+
+  if (digitalHumanImageUrl) {
+    finalImageUrl = digitalHumanImageUrl;
+    source = "digital_human";
+  } else if (character.avatarUrl) {
+    finalImageUrl = character.avatarUrl;
+    source = "avatar";
+  }
+
+  console.log("[getCharacterImage] 最终返回:", {
+    imageUrl: finalImageUrl,
+    characterName: character.name,
+    digitalHumanId: usedDigitalHumanId,
+    source,
   });
 
-  const result = digitalHumanImageUrl || character.avatarUrl || undefined;
-  console.log("[getCharacterImage] 最终返回:", result);
-
-  return result;
+  return {
+    imageUrl: finalImageUrl,
+    characterId: character.id,
+    characterName: character.name,
+    digitalHumanId: usedDigitalHumanId,
+    source,
+  };
 }

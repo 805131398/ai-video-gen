@@ -32,6 +32,8 @@ exports.deleteSceneVideo = deleteSceneVideo;
 exports.saveResourceDownload = saveResourceDownload;
 exports.getResourceDownload = getResourceDownload;
 exports.updateResourceDownload = updateResourceDownload;
+exports.saveGenerationSnapshot = saveGenerationSnapshot;
+exports.getGenerationSnapshots = getGenerationSnapshots;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
 const electron_1 = require("electron");
@@ -207,6 +209,28 @@ function createTables() {
       UNIQUE(resource_type, resource_id)
     )
   `);
+    // 生成操作快照表
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS generation_snapshots (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      script_id TEXT NOT NULL,
+      scene_id TEXT NOT NULL,
+      video_id TEXT,
+      original_prompt TEXT,
+      final_prompt TEXT,
+      prompt_type TEXT,
+      use_storyboard INTEGER,
+      use_character_image INTEGER,
+      aspect_ratio TEXT,
+      character_id TEXT,
+      character_name TEXT,
+      digital_human_id TEXT,
+      reference_image TEXT,
+      scene_content TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
     console.log('Database tables created successfully');
 }
 // 获取用户信息
@@ -287,14 +311,20 @@ function saveSetting(key, value) {
 function saveProject(project) {
     if (!db)
         return false;
+    // 必须有 id 才能保存
+    if (!project.id) {
+        console.warn('Skipping saveProject: missing id');
+        return false;
+    }
     try {
+        const now = new Date().toISOString();
         const stmt = db.prepare(`
       INSERT OR REPLACE INTO projects (
         id, user_id, topic, title, status, current_step,
         theme_name, theme_desc, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-        stmt.run(project.id, project.userId, project.topic, project.title, project.status, project.currentStep, project.themeName, project.themeDesc, project.createdAt, project.updatedAt);
+        stmt.run(project.id, project.userId || '', project.topic || '', project.title || null, project.status || 'DRAFT', project.currentStep || 'TOPIC_INPUT', project.themeName || null, project.themeDesc || null, project.createdAt || now, project.updatedAt || now);
         return true;
     }
     catch (error) {
@@ -373,14 +403,27 @@ function deleteProject(projectId) {
 function saveCharacter(character) {
     if (!db)
         return false;
+    // 必须有 id 和 projectId 才能保存
+    if (!character.id || !character.projectId) {
+        console.warn('Skipping saveCharacter: missing id or projectId');
+        return false;
+    }
     try {
+        // 先检查 project 是否存在，不存在则跳过（避免 FK 约束失败）
+        const checkStmt = db.prepare('SELECT id FROM projects WHERE id = ?');
+        const project = checkStmt.get(character.projectId);
+        if (!project) {
+            console.warn('Skipping saveCharacter: project not found:', character.projectId);
+            return false;
+        }
+        const now = new Date().toISOString();
         const stmt = db.prepare(`
       INSERT OR REPLACE INTO project_characters (
         id, project_id, name, description, avatar_url,
         attributes, sort_order, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-        stmt.run(character.id, character.projectId, character.name, character.description, character.avatarUrl, character.attributes ? JSON.stringify(character.attributes) : null, character.sortOrder, character.createdAt, character.updatedAt);
+        stmt.run(character.id, character.projectId, character.name || '', character.description || '', character.avatarUrl || null, character.attributes ? JSON.stringify(character.attributes) : null, character.sortOrder ?? 0, character.createdAt || now, character.updatedAt || now);
         return true;
     }
     catch (error) {
@@ -432,6 +475,13 @@ function saveDigitalHuman(digitalHuman) {
     if (!db)
         return false;
     try {
+        // 先检查 character 是否存在
+        const checkStmt = db.prepare('SELECT id FROM project_characters WHERE id = ?');
+        const character = checkStmt.get(digitalHuman.characterId);
+        if (!character) {
+            console.error('Error saving digital human: Character not found:', digitalHuman.characterId);
+            return false;
+        }
         const stmt = db.prepare(`
       INSERT OR REPLACE INTO digital_humans (
         id, character_id, image_url, prompt, is_selected, created_at
@@ -743,5 +793,60 @@ function updateResourceDownload(resourceType, resourceId, updates) {
     catch (error) {
         console.error('Error updating resource download:', error);
         return false;
+    }
+}
+// ==================== 生成快照管理 ====================
+// 保存生成快照
+function saveGenerationSnapshot(snapshot) {
+    if (!db)
+        return false;
+    try {
+        const stmt = db.prepare(`
+      INSERT OR REPLACE INTO generation_snapshots (
+        id, project_id, script_id, scene_id, video_id,
+        original_prompt, final_prompt, prompt_type,
+        use_storyboard, use_character_image, aspect_ratio,
+        character_id, character_name, digital_human_id,
+        reference_image, scene_content, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+        stmt.run(snapshot.id, snapshot.projectId, snapshot.scriptId, snapshot.sceneId, snapshot.videoId || null, snapshot.originalPrompt, snapshot.finalPrompt, snapshot.promptType, snapshot.useStoryboard ? 1 : 0, snapshot.useCharacterImage ? 1 : 0, snapshot.aspectRatio, snapshot.characterId || null, snapshot.characterName || null, snapshot.digitalHumanId || null, snapshot.referenceImage || null, snapshot.sceneContent, snapshot.createdAt || new Date().toISOString());
+        return true;
+    }
+    catch (error) {
+        console.error('Error saving generation snapshot:', error);
+        return false;
+    }
+}
+// 获取场景的生成快照
+function getGenerationSnapshots(sceneId) {
+    if (!db)
+        return [];
+    try {
+        const stmt = db.prepare('SELECT * FROM generation_snapshots WHERE scene_id = ? ORDER BY created_at DESC');
+        const rows = stmt.all(sceneId);
+        return rows.map((row) => ({
+            id: row.id,
+            projectId: row.project_id,
+            scriptId: row.script_id,
+            sceneId: row.scene_id,
+            videoId: row.video_id,
+            originalPrompt: row.original_prompt,
+            finalPrompt: row.final_prompt,
+            promptType: row.prompt_type,
+            useStoryboard: row.use_storyboard === 1,
+            useCharacterImage: row.use_character_image === 1,
+            aspectRatio: row.aspect_ratio,
+            characterId: row.character_id,
+            characterName: row.character_name,
+            digitalHumanId: row.digital_human_id,
+            referenceImage: row.reference_image,
+            sceneContent: row.scene_content,
+            createdAt: row.created_at,
+        }));
+    }
+    catch (error) {
+        console.error('Error getting generation snapshots:', error);
+        return [];
     }
 }

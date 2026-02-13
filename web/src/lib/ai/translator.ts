@@ -46,7 +46,7 @@ export async function translateText(
 
     // 记录成功日志
     await logAIUsage({
-      tenantId: tenantId || "",
+      tenantId: tenantId || null,
       userId: userId || "",
       modelType: "TEXT",
       modelConfigId: config.id,
@@ -65,7 +65,7 @@ export async function translateText(
   } catch (error) {
     // 记录失败日志
     await logAIUsage({
-      tenantId: tenantId || "",
+      tenantId: tenantId || null,
       userId: userId || "",
       modelType: "TEXT",
       modelConfigId: config.id,

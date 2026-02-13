@@ -107,7 +107,9 @@ export async function POST(
         videoConfig,
         aspectRatio,
         promptType,
-        scriptId
+        scriptId,
+        user.id,
+        user.tenantId
       );
     } else {
       // 单独生成模式：为每个场景单独生成视频
@@ -118,6 +120,8 @@ export async function POST(
           type: promptType,
           scene,
           characters: script.project.characters,
+          userId: user.id,
+          tenantId: user.tenantId,
         });
 
         // 创建视频记录（状态为 pending）
@@ -181,8 +185,10 @@ async function generateStoryboardVideo(
   characters: any[],
   videoConfig: any,
   aspectRatio: string,
-  promptType: string,
-  scriptId: string
+  promptType: "smart_combine" | "ai_optimized",
+  scriptId: string,
+  userId?: string,
+  tenantId?: string
 ) {
   // 1. 为每个场景构建 prompt
   const scenePrompts = [];
@@ -191,6 +197,8 @@ async function generateStoryboardVideo(
       type: promptType,
       scene,
       characters,
+      userId,
+      tenantId,
     });
     scenePrompts.push({
       title: scene.title,

@@ -200,7 +200,7 @@ Rules:
 
     // 记录成功日志
     await logAIUsage({
-      tenantId: tenantId || "",
+      tenantId: tenantId || null,
       userId: userId || "",
       modelType: "TEXT",
       modelConfigId: config.id,
@@ -227,7 +227,7 @@ Rules:
     );
     if (config) {
       await logAIUsage({
-        tenantId: tenantId || "",
+        tenantId: tenantId || null,
         userId: userId || "",
         modelType: "TEXT",
         modelConfigId: config.id,

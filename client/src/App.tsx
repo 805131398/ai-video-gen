@@ -6,11 +6,14 @@ import Register from './pages/Register';
 import ProjectManagement from './pages/ProjectManagement';
 import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
+import CharacterNew from './pages/CharacterNew';
+import CharacterEdit from './pages/CharacterEdit';
 import ProjectScripts from './pages/ProjectScripts';
 import ProjectScript from './pages/ProjectScript';
 import ScriptEditor from './pages/ScriptEditor';
 import SceneEdit from './pages/SceneEdit';
 import SceneVideos from './pages/SceneVideos';
+import SceneVideoGenerate from './pages/SceneVideoGenerate';
 import Profile from './pages/Profile';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
@@ -68,12 +71,15 @@ function App() {
             <Route path="projects" element={<ProjectManagement />} />
             <Route path="projects/new" element={<ProjectNew />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
+            <Route path="projects/:id/characters/new" element={<CharacterNew />} />
+            <Route path="projects/:id/characters/:characterId/edit" element={<CharacterEdit />} />
             <Route path="projects/:id/scripts" element={<ProjectScripts />} />
             <Route path="projects/:id/scripts/new" element={<ScriptEditor />} />
             <Route path="projects/:id/scripts/:scriptId/edit" element={<ScriptEditor />} />
             <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
             <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
             <Route path="projects/:id/script/:scriptId/scenes/:sceneId/videos" element={<SceneVideos />} />
+            <Route path="projects/:id/script/:scriptId/scenes/:sceneId/generate" element={<SceneVideoGenerate />} />
             <Route path="profile" element={<Profile />} />
             <Route path="activate" element={<Navigate to="/projects" />} />
           </Route>

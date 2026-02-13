@@ -51,7 +51,7 @@ async function generateStepContent(
       // 使用日志包装器调用标题生成
       const titles = await withUsageLogging(
         {
-          tenantId: tenantId || "",
+          tenantId: tenantId || null,
           userId,
           projectId,
           modelType: "TEXT",
@@ -132,7 +132,7 @@ async function generateStepContent(
       // 使用日志包装器调用文案生成
       const copies = await withUsageLogging(
         {
-          tenantId: tenantId || "",
+          tenantId: tenantId || null,
           userId,
           projectId,
           modelType: "TEXT",

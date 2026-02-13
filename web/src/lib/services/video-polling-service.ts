@@ -357,7 +357,7 @@ export async function pollVideoStatus(
           if (config) {
             const duration = status.duration || 10;
             await logAIUsage({
-              tenantId: tenantId || "",
+              tenantId: tenantId || null,
               userId,
               projectId,
               modelType: "VIDEO",
@@ -396,7 +396,7 @@ export async function pollVideoStatus(
           // 记录失败日志
           if (config) {
             await logAIUsage({
-              tenantId: tenantId || "",
+              tenantId: tenantId || null,
               userId,
               projectId,
               modelType: "VIDEO",
@@ -451,7 +451,7 @@ export async function pollVideoStatus(
       // 记录超时失败日志
       if (config) {
         await logAIUsage({
-          tenantId: tenantId || "",
+          tenantId: tenantId || null,
           userId,
           projectId,
           modelType: "VIDEO",

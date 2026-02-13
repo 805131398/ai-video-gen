@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Edit2, Trash2, Image as ImageIcon, Sparkles, Check } from 'lucide-react';
 import { ProjectCharacter } from '../../types';
 import ImageWithFallback from '../ImageWithFallback';
@@ -26,6 +27,31 @@ export default function CharacterCard({
   const selectedDigitalHuman = character.digitalHumans?.find(
     (dh) => dh.id === selectedDigitalHumanId
   );
+
+  // 加载数字人的本地图片路径
+  const [localImageUrl, setLocalImageUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (!selectedDigitalHumanId || !selectedDigitalHuman) {
+      setLocalImageUrl('');
+      return;
+    }
+
+    const loadLocalPath = async () => {
+      try {
+        const status = await window.electron.resources.getStatus('digital_human', selectedDigitalHumanId);
+        if (status && status.status === 'completed' && status.localPath) {
+          setLocalImageUrl(`local-resource://${status.localPath}`);
+        } else {
+          setLocalImageUrl(selectedDigitalHuman.imageUrl);
+        }
+      } catch {
+        setLocalImageUrl(selectedDigitalHuman.imageUrl);
+      }
+    };
+
+    loadLocalPath();
+  }, [selectedDigitalHumanId, selectedDigitalHuman]);
 
   // 过滤掉技术性属性，只显示有意义的用户属性
   const displayAttributes = character.attributes
@@ -80,7 +106,7 @@ export default function CharacterCard({
         {selectedDigitalHuman ? (
           <div className="relative w-32 h-40 mx-auto">
             <ImageWithFallback
-              src={selectedDigitalHuman.imageUrl}
+              src={localImageUrl || selectedDigitalHuman.imageUrl}
               alt={`${character.name}的数字人`}
               className="w-full h-full object-cover rounded-lg border-2 border-blue-200 shadow-sm"
               fallbackMessage="数字人图片缓存已失效，请联系管理员处理"

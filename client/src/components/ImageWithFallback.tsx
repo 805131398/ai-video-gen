@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertCircle, ImageOff } from 'lucide-react';
 
 interface ImageWithFallbackProps {
@@ -16,10 +16,20 @@ export default function ImageWithFallback({
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentSrc, setCurrentSrc] = useState(src);
+
+  // 当 src 改变时，重置状态
+  useEffect(() => {
+    setHasError(false);
+    setIsLoading(true);
+    setCurrentSrc(src);
+  }, [src]);
 
   const handleError = () => {
     setHasError(true);
     setIsLoading(false);
+    // 关键：将 src 设置为空，避免浏览器重试
+    setCurrentSrc('');
   };
 
   const handleLoad = () => {
@@ -52,7 +62,7 @@ export default function ImageWithFallback({
         </div>
       )}
       <img
-        src={src}
+        src={currentSrc}
         alt={alt}
         className={`${className} ${isLoading ? 'hidden' : ''}`}
         onError={handleError}

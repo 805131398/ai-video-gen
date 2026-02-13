@@ -213,7 +213,7 @@ async function generateDigitalHumansAsync(
           // 记录成功日志
           if (config) {
             await logAIUsage({
-              tenantId: tenantId || "",
+              tenantId: tenantId || null,
               userId,
               projectId,
               modelType: "IMAGE",
@@ -238,7 +238,7 @@ async function generateDigitalHumansAsync(
         // 记录失败日志
         if (config) {
           await logAIUsage({
-            tenantId: tenantId || "",
+            tenantId: tenantId || null,
             userId,
             projectId,
             modelType: "IMAGE",

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Filter, SortAsc, Play, Check, Trash2, RefreshCw, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { getScript, getScriptScenes, getSceneVideos, selectSceneVideo, deleteSceneVideo } from '../services/script';
 import { ProjectScript, ScriptScene, SceneVideo } from '../types';
-import VideoGenerateDialog from '../components/scene-videos/VideoGenerateDialog';
+import { syncSceneVideoToLocal } from '../services/localDataService';
 import VideoDetailDrawer from '../components/scene-videos/VideoDetailDrawer';
 
 export default function SceneVideosPage() {
@@ -16,8 +16,7 @@ export default function SceneVideosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 对话框和抽屉状态
-  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  // 抽屉状态
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<SceneVideo | null>(null);
 
@@ -74,6 +73,19 @@ export default function SceneVideosPage() {
     return () => clearInterval(interval);
   }, [videos, refreshVideos]);
 
+  // 同步已完成的视频到本地存储（下载视频文件和缩略图）
+  const syncedVideoIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!id || !sceneId) return;
+    const completedVideos = videos.filter(
+      v => v.status === 'completed' && (v.videoUrl || v.thumbnailUrl) && !syncedVideoIdsRef.current.has(v.id)
+    );
+    for (const video of completedVideos) {
+      syncedVideoIdsRef.current.add(video.id);
+      syncSceneVideoToLocal(id, sceneId, video);
+    }
+  }, [id, sceneId, videos]);
+
   // 每秒更新已用时间显示
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -124,16 +136,10 @@ export default function SceneVideosPage() {
     setIsDrawerOpen(true);
   };
 
-  const handleGenerateSuccess = () => {
-    setIsGenerateDialogOpen(false);
-    loadData();
-  };
-
   const handleRegenerate = (video: SceneVideo) => {
-    // 打开生成对话框，预填充参数
-    setSelectedVideo(video);
+    // 跳转到生成页面
     setIsDrawerOpen(false);
-    setIsGenerateDialogOpen(true);
+    navigate(`/projects/${id}/script/${scriptId}/scenes/${sceneId}/generate`);
   };
 
   // 计算已用时间
@@ -199,13 +205,18 @@ export default function SceneVideosPage() {
         <div className="flex items-center gap-2 mb-2 text-sm text-slate-600">
           <button
             onClick={() => navigate(`/projects/${id}/script/${scriptId}`)}
-            className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-1 hover:text-slate-900 cursor-pointer transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             返回
           </button>
           <span className="text-slate-400">/</span>
-          <span className="truncate max-w-[200px]">{script.title}</span>
+          <button
+            onClick={() => navigate(`/projects/${id}/script/${scriptId}`)}
+            className="hover:text-slate-900 cursor-pointer transition-colors"
+          >
+            {script.title}
+          </button>
           <span className="text-slate-400">/</span>
           <span className="text-slate-900 font-medium">场景视频列表</span>
         </div>
@@ -222,7 +233,7 @@ export default function SceneVideosPage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsGenerateDialogOpen(true)}
+              onClick={() => navigate(`/projects/${id}/script/${scriptId}/scenes/${sceneId}/generate`)}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -246,7 +257,7 @@ export default function SceneVideosPage() {
             </div>
             <p className="text-slate-600 mb-4">还没有生成视频，点击按钮开始生成</p>
             <button
-              onClick={() => setIsGenerateDialogOpen(true)}
+              onClick={() => navigate(`/projects/${id}/script/${scriptId}/scenes/${sceneId}/generate`)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -397,21 +408,6 @@ export default function SceneVideosPage() {
           </div>
         )}
       </div>
-
-      {/* 生成视频对话框 */}
-      <VideoGenerateDialog
-        isOpen={isGenerateDialogOpen}
-        onClose={() => {
-          setIsGenerateDialogOpen(false);
-          setSelectedVideo(null);
-        }}
-        projectId={id!}
-        scriptId={scriptId!}
-        sceneId={sceneId!}
-        scene={scene}
-        defaultValues={selectedVideo?.metadata}
-        onSuccess={handleGenerateSuccess}
-      />
 
       {/* 视频详情抽屉 */}
       <VideoDetailDrawer

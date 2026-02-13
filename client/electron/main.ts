@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import {
   initDatabase,
   getUser,
@@ -34,6 +35,9 @@ import {
   saveSceneVideo,
   getSceneVideos,
   deleteSceneVideo,
+  // 生成快照管理
+  saveGenerationSnapshot,
+  getGenerationSnapshots,
   // 资源下载管理
   saveResourceDownload,
   getResourceDownload,
@@ -44,6 +48,18 @@ import { downloadResource, deleteProjectResources } from './resources';
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// 注册自定义协议 scheme（必须在 app.whenReady 之前调用）
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'local-resource',
+  privileges: {
+    secure: true,
+    supportFetchAPI: true,
+    bypassCSP: true,
+    corsEnabled: true,
+    stream: true,
+  }
+}]);
 
 function createWindow() {
   // 设置图标路径
@@ -83,6 +99,13 @@ function createWindow() {
 app.whenReady().then(() => {
   // 初始化数据库
   initDatabase();
+
+  // 注册自定义协议处理器，用于加载本地资源文件
+  protocol.handle('local-resource', (request) => {
+    // URL 格式: local-resource:///path/to/file
+    const filePath = decodeURIComponent(request.url.slice('local-resource://'.length));
+    return net.fetch(`file://${filePath}`);
+  });
 
   // 创建窗口
   createWindow();
@@ -209,6 +232,15 @@ function registerIpcHandlers() {
     return deleteSceneVideo(videoId);
   });
 
+  // 生成快照管理
+  ipcMain.handle('db:saveGenerationSnapshot', async (_, snapshot: any) => {
+    return saveGenerationSnapshot(snapshot);
+  });
+
+  ipcMain.handle('db:getGenerationSnapshots', async (_, sceneId: string) => {
+    return getGenerationSnapshots(sceneId);
+  });
+
   // 资源下载管理
   ipcMain.handle('resources:download', async (_, params: any) => {
     return await downloadResource(params);
@@ -239,6 +271,43 @@ function registerIpcHandlers() {
     });
 
     return { success: true };
+  });
+
+  // 获取资源根目录路径
+  ipcMain.handle('resources:getRootPath', async () => {
+    const userDataPath = app.getPath('userData');
+    const resourcesRoot = path.join(userDataPath, 'resources');
+    return {
+      userDataPath,
+      resourcesRoot,
+    };
+  });
+
+  // 打开资源文件夹
+  ipcMain.handle('resources:openFolder', async () => {
+    const { getSetting } = await import('./database');
+
+    // 尝试从设置中读取路径配置
+    const pathType = getSetting('storage_path_type');
+    const customPath = getSetting('storage_custom_path');
+
+    // 确定实际路径
+    let resourcesRoot: string;
+    if (pathType === 'custom' && customPath) {
+      resourcesRoot = customPath;
+    } else {
+      resourcesRoot = path.join(app.getPath('userData'), 'resources');
+    }
+
+    // 确保目录存在
+    if (!fsSync.existsSync(resourcesRoot)) {
+      await fs.mkdir(resourcesRoot, { recursive: true });
+    }
+
+    // 打开文件夹
+    await shell.openPath(resourcesRoot);
+
+    return { success: true, path: resourcesRoot };
   });
 
   // 设置操作

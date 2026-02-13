@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon, Sparkles, ArrowLeft } from 'lucide-react';
 import { ProjectCharacter, CreateCharacterRequest } from '../../types';
 import { uploadAvatar } from '../../services/storage';
-import { generateCharacterDescription } from '../../services/project';
+import { generateCharacterDescription, selectDigitalHuman } from '../../services/project';
 import DigitalHumanGenerator, { DigitalHuman } from './DigitalHumanGenerator';
 import DigitalHumanHistory from './DigitalHumanHistory';
 
@@ -134,6 +134,19 @@ export default function CharacterDetailEditor({
     }
   };
 
+  const handleSelectDigitalHuman = async (humanId: string) => {
+    setSelectedDigitalHumanId(humanId);
+
+    // 如果角色已保存，同步选择到服务端
+    if (character?.id) {
+      try {
+        await selectDigitalHuman(projectId, character.id, humanId);
+      } catch (err) {
+        console.error('同步数字人选择失败:', err);
+      }
+    }
+  };
+
   const handleGenerateDigitalHumans = async (
     desc: string,
     refImage?: string,
@@ -185,8 +198,8 @@ export default function CharacterDetailEditor({
       const result = await generateDigitalHumans(projectId, character.id, count || 1, aspectRatio);
       console.log('生成任务已启动:', result);
 
-      // 记录生成前的数字人数量
-      const beforeDigitalHumans = await getDigitalHumans(projectId, character.id);
+      // 记录生成前的数字人数量（强制从服务端获取，避免本地缓存不准确）
+      const beforeDigitalHumans = await getDigitalHumans(projectId, character.id, true);
       const beforeCount = beforeDigitalHumans.length;
       const expectedCount = count || 1;
 
@@ -198,7 +211,7 @@ export default function CharacterDetailEditor({
         await new Promise(resolve => setTimeout(resolve, 3000)); // 等待3秒
 
         try {
-          const digitalHumans = await getDigitalHumans(projectId, character.id);
+          const digitalHumans = await getDigitalHumans(projectId, character.id, true);
           const newCount = digitalHumans.length - beforeCount;
 
           // 如果生成的数量达到预期，说明生成完成
@@ -384,7 +397,7 @@ export default function CharacterDetailEditor({
                 characterDescription={description}
                 referenceImageUrl={referenceImageUrl}
                 selectedHumanId={selectedDigitalHumanId}
-                onSelect={setSelectedDigitalHumanId}
+                onSelect={handleSelectDigitalHuman}
                 onGenerate={handleGenerateDigitalHumans}
                 onHistoryChange={(history, loading, generating) => {
                   setDigitalHumansHistory(history);
@@ -401,7 +414,7 @@ export default function CharacterDetailEditor({
                 selectedHumanId={selectedDigitalHumanId}
                 loading={historyLoading}
                 generating={historyGenerating}
-                onSelect={setSelectedDigitalHumanId}
+                onSelect={handleSelectDigitalHuman}
                 onRegenerate={() => handleGenerateDigitalHumans(description, referenceImageUrl)}
               />
             </div>

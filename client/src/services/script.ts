@@ -1,5 +1,5 @@
 import api from './api';
-import { ProjectScript, ScriptScene, SceneContent, SceneVideo } from '../types';
+import { ProjectScript, ScriptScene, SceneContent, SceneVideo, PreviewPromptRequest, PreviewPromptResponse } from '../types';
 
 // 获取项目的所有剧本
 export const getProjectScripts = async (projectId: string): Promise<ProjectScript[]> => {
@@ -169,6 +169,7 @@ export const generateSceneVideo = async (
     aspectRatio?: string;
     duration?: number;
     hd?: boolean;
+    customPrompt?: string;
   }
 ): Promise<{ taskId: string; message: string; sceneCount: number }> => {
   const response = await api.post(
@@ -243,5 +244,19 @@ export const deleteSceneVideo = async (
   await api.delete(
     `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/videos/${videoId}`
   );
+};
+
+// 预览视频生成提示词
+export const previewPrompt = async (
+  projectId: string,
+  scriptId: string,
+  sceneId: string,
+  options?: PreviewPromptRequest
+): Promise<PreviewPromptResponse> => {
+  const response = await api.post(
+    `/projects/${projectId}/scripts/${scriptId}/scenes/${sceneId}/preview-prompt`,
+    options
+  );
+  return response.data;
 };
 

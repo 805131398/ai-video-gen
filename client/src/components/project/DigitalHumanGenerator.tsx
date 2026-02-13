@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Check, Loader2, ZoomIn, Copy, CheckCheck } from 'lucide-react';
 import { getDigitalHumans } from '../../services/project';
+import ImageWithFallback from '../ImageWithFallback';
 
 export interface DigitalHuman {
   id: string;
   imageUrl: string;
   prompt: string;
   createdAt: string;
+  isSelected?: boolean;
 }
 
 interface DigitalHumanGeneratorProps {
@@ -40,6 +42,7 @@ export default function DigitalHumanGenerator({
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'landscape'>('portrait');
   const [generateCount, setGenerateCount] = useState<1 | 4 | 8>(1);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
   // 加载历史数字人
   useEffect(() => {
@@ -66,11 +69,13 @@ export default function DigitalHumanGenerator({
     loadHistory();
   }, [characterId, projectId]);
 
-  // 自动选择默认数字人：如果没有选中且有历史记录，选择最后一个（最新的）
+  // 自动选择默认数字人：优先选择服务端标记为 isSelected 的，否则选择最新的
   useEffect(() => {
     if (!selectedHumanId && history.length > 0 && !loading) {
-      console.log('自动选择最新的数字人:', history[0].id);
-      onSelect(history[0].id);
+      const serverSelected = history.find(h => h.isSelected);
+      const targetId = serverSelected ? serverSelected.id : history[0].id;
+      console.log('自动选择数字人:', targetId, serverSelected ? '(服务端标记)' : '(最新)');
+      onSelect(targetId);
     }
   }, [history, selectedHumanId, loading, onSelect]);
 
@@ -80,6 +85,46 @@ export default function DigitalHumanGenerator({
       onHistoryChange(history, loading, generating);
     }
   }, [history, loading, generating, onHistoryChange]);
+
+  // 加载当前选中数字人的本地图片路径
+  useEffect(() => {
+    const loadCurrentImageUrl = async () => {
+      console.log('[DigitalHumanGenerator] 加载当前图片 URL, selectedHumanId:', selectedHumanId);
+
+      if (!selectedHumanId) {
+        setCurrentImageUrl('');
+        return;
+      }
+
+      const selectedHuman = history.find((h) => h.id === selectedHumanId);
+      if (!selectedHuman) {
+        console.log('[DigitalHumanGenerator] 未找到选中的数字人');
+        setCurrentImageUrl('');
+        return;
+      }
+
+      try {
+        // 检查是否有本地下载的版本
+        const status = await window.electron.resources.getStatus('digital_human', selectedHumanId);
+
+        if (status && status.status === 'completed' && status.localPath) {
+          // 使用本地路径
+          console.log(`[DigitalHumanGenerator] 使用本地路径: ${status.localPath}`);
+          setCurrentImageUrl(`local-resource://${status.localPath}`);
+        } else {
+          // 使用远程 URL
+          console.log(`[DigitalHumanGenerator] 使用远程 URL, status:`, status?.status);
+          setCurrentImageUrl(selectedHuman.imageUrl);
+        }
+      } catch (error) {
+        console.error('获取资源状态失败:', error);
+        // 降级使用远程 URL
+        setCurrentImageUrl(selectedHuman.imageUrl);
+      }
+    };
+
+    loadCurrentImageUrl();
+  }, [selectedHumanId, history]);
 
   const handleCopyPrompt = async (e: React.MouseEvent, prompt: string) => {
     e.stopPropagation();
@@ -106,7 +151,7 @@ export default function DigitalHumanGenerator({
 
       // 生成完成后，如果有 characterId，重新加载完整的数字人列表
       if (characterId) {
-        const allDigitalHumans = await getDigitalHumans(projectId, characterId);
+        const allDigitalHumans = await getDigitalHumans(projectId, characterId, true);
 
         // 按创建时间倒序排列（最新的在前）
         const sorted = allDigitalHumans.sort((a, b) =>
@@ -138,14 +183,14 @@ export default function DigitalHumanGenerator({
 
         {selectedHuman ? (
           <div className="relative group">
-            <img
-              src={selectedHuman.imageUrl}
+            <ImageWithFallback
+              src={currentImageUrl || selectedHuman.imageUrl}
               alt={characterName}
               className="w-full max-h-[300px] object-contain rounded-lg shadow-md cursor-pointer transition-transform hover:scale-[1.02] bg-white"
-              onClick={() => setPreviewImage(selectedHuman.imageUrl)}
+              fallbackMessage="数字人图片缓存已失效"
             />
             <button
-              onClick={() => setPreviewImage(selectedHuman.imageUrl)}
+              onClick={() => setPreviewImage(currentImageUrl || selectedHuman.imageUrl)}
               className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-white"
             >
               <ZoomIn className="w-4 h-4 text-gray-700" />

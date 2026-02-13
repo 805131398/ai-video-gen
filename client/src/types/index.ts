@@ -133,6 +133,9 @@ export interface ElectronAPI {
     saveSceneVideo: (video: SceneVideo) => Promise<boolean>;
     getSceneVideos: (sceneId: string) => Promise<SceneVideo[]>;
     deleteSceneVideo: (videoId: string) => Promise<boolean>;
+    // 生成快照管理
+    saveGenerationSnapshot: (snapshot: GenerationSnapshot) => Promise<boolean>;
+    getGenerationSnapshots: (sceneId: string) => Promise<GenerationSnapshot[]>;
   };
   resources: {
     download: (params: DownloadResourceParams) => Promise<DownloadResult>;
@@ -298,5 +301,46 @@ export interface StorageUsage {
   totalBytes: number;
   fileCount: number;
   lastCalculated: Date | null;
+}
+
+// 提示词预览请求
+export interface PreviewPromptRequest {
+  promptType?: 'smart_combine' | 'ai_optimized';
+  useStoryboard?: boolean;
+  useCharacterImage?: boolean;
+}
+
+// 提示词预览响应
+export interface PreviewPromptResponse {
+  success: boolean;
+  prompt: string;
+  characterInfo: {
+    characterId?: string;
+    characterName?: string;
+    digitalHumanId?: string;
+    referenceImage?: string;
+    imageSource?: 'digital_human' | 'avatar';
+  };
+}
+
+// 生成操作快照（本地 SQLite）
+export interface GenerationSnapshot {
+  id: string;
+  projectId: string;
+  scriptId: string;
+  sceneId: string;
+  videoId?: string;
+  originalPrompt: string;
+  finalPrompt: string;
+  promptType: string;
+  useStoryboard: boolean;
+  useCharacterImage: boolean;
+  aspectRatio: string;
+  characterId?: string;
+  characterName?: string;
+  digitalHumanId?: string;
+  referenceImage?: string;
+  sceneContent: string; // JSON string
+  createdAt: string;
 }
 

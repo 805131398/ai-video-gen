@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AIModelType, AILogStatus } from "@prisma/client";
 
 interface LogAIUsageParams {
-  tenantId: string;
+  tenantId: string | null;
   userId: string;
   projectId?: string;
   modelType: AIModelType;

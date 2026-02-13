@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const tenantId = session.user.tenantId;
     const searchParams = request.nextUrl.searchParams;
 
+    console.log("[AI Logs API] Request from user:", session.user.id, "tenantId:", tenantId);
+
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "20");
     const startDate = searchParams.get("startDate");
@@ -84,6 +86,8 @@ export async function GET(request: NextRequest) {
       }),
       prisma.aIUsageLog.count({ where }),
     ]);
+
+    console.log("[AI Logs API] Found", total, "logs, returning", logs.length, "items for page", page);
 
     return NextResponse.json({
       data: logs.map((log) => ({

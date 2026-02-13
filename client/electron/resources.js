@@ -15,8 +15,19 @@ const electron_1 = require("electron");
 const database_1 = require("./database");
 // 获取资源根目录
 function getResourcesRoot() {
+    // 尝试从设置中读取路径配置
+    const pathType = (0, database_1.getSetting)('storage_path_type');
+    const customPath = (0, database_1.getSetting)('storage_custom_path');
+    // 如果配置了自定义路径，使用自定义路径
+    if (pathType === 'custom' && customPath) {
+        console.log('使用自定义存储路径:', customPath);
+        return customPath;
+    }
+    // 默认使用 userData/resources
     const userDataPath = electron_1.app.getPath('userData');
-    return path_1.default.join(userDataPath, 'resources');
+    const defaultPath = path_1.default.join(userDataPath, 'resources');
+    console.log('使用默认存储路径:', defaultPath);
+    return defaultPath;
 }
 // 确保资源目录存在
 function ensureResourceDirectory(projectId, resourceType, characterId, sceneId) {
@@ -77,6 +88,36 @@ async function downloadResource(params) {
         const ext = getExtensionFromUrl(url);
         // 确定本地路径
         const localPath = getResourcePath(projectId, resourceType, resourceId, characterId, sceneId, ext);
+        // 检查是否已有下载记录
+        const existingDownload = (0, database_1.getResourceDownload)(resourceType, resourceId);
+        // 如果已经下载完成，检查文件是否存在
+        if (existingDownload && existingDownload.status === 'completed' && existingDownload.localPath) {
+            if (fs_1.default.existsSync(existingDownload.localPath)) {
+                console.log('✅ 文件已存在，跳过下载:', existingDownload.localPath);
+                return {
+                    success: true,
+                    localPath: existingDownload.localPath,
+                    cached: true,
+                };
+            }
+            else {
+                console.log('⚠️  下载记录存在但文件丢失，重新下载');
+            }
+        }
+        // 如果正在下载中，返回提示
+        if (existingDownload && (existingDownload.status === 'pending' || existingDownload.status === 'downloading')) {
+            console.log('⏳ 资源正在下载中，请稍候');
+            return {
+                success: false,
+                error: '资源正在下载中',
+                downloading: true,
+            };
+        }
+        console.log('📥 开始下载资源:');
+        console.log('  - 资源类型:', resourceType);
+        console.log('  - 资源 ID:', resourceId);
+        console.log('  - 远程 URL:', url);
+        console.log('  - 本地路径:', localPath);
         // 保存下载记录（pending 状态）
         (0, database_1.saveResourceDownload)({
             resourceType,
@@ -103,13 +144,14 @@ async function downloadResource(params) {
             status: 'completed',
             downloadedSize: stats.size,
         });
+        console.log('✅ 下载完成:', localPath);
         return {
             success: true,
             localPath,
         };
     }
     catch (error) {
-        console.error('Error downloading resource:', error);
+        console.error('❌ 下载失败:', error);
         // 更新失败状态
         (0, database_1.updateResourceDownload)(resourceType, resourceId, {
             status: 'failed',

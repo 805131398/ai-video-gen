@@ -1,6 +1,7 @@
 import { useSettingsStore } from '@/store/settings';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, HardDrive, FileText, Clock } from 'lucide-react';
+import { RefreshCw, HardDrive, FileText, Clock, FolderOpen } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -23,9 +24,37 @@ function formatDate(date: Date | null): string {
 
 export default function StorageUsageDisplay() {
   const { storageUsage, calculateStorageUsage, isLoading } = useSettingsStore();
+  const { toast } = useToast();
 
   const handleRefresh = async () => {
     await calculateStorageUsage();
+  };
+
+  const handleOpenFolder = async () => {
+    try {
+      if (window.electron?.resources?.openFolder) {
+        const result = await window.electron.resources.openFolder();
+        if (result.success) {
+          toast({
+            title: '已打开文件夹',
+            description: result.path,
+          });
+        }
+      } else {
+        toast({
+          title: '功能不可用',
+          description: '请在 Electron 环境中使用此功能',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('打开文件夹失败:', error);
+      toast({
+        title: '打开失败',
+        description: '无法打开资源文件夹',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -66,16 +95,28 @@ export default function StorageUsageDisplay() {
         </div>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleRefresh}
-        disabled={isLoading}
-        className="w-full md:w-auto"
-      >
-        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-        {isLoading ? '计算中...' : '刷新'}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="flex-1 md:flex-none"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? '计算中...' : '刷新'}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleOpenFolder}
+          className="flex-1 md:flex-none"
+        >
+          <FolderOpen className="w-4 h-4 mr-2" />
+          打开文件夹
+        </Button>
+      </div>
     </div>
   );
 }
