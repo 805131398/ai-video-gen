@@ -4,6 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { StepType, StepStatus } from "@/generated/prisma/enums";
 import { ROUTE_TO_STEP, type RouteStep } from "@/types/ai-video";
 import { generateTitles, generateCopywriting } from "@/lib/ai/text-generator";
+import { withUsageLogging } from "@/lib/services/ai-usage-service";
+import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { AIModelType } from "@/generated/prisma/enums";
+
+/**
+ * Token 估算函数
+ */
+function estimateTokenCount(text: string): number {
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+  return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+}
 
 // 步骤生成逻辑映射
 async function generateStepContent(
@@ -30,11 +42,38 @@ async function generateStepContent(
         data: { topic: topic.trim() },
       });
 
-      // 直接调用标题生成函数
-      const titles = await generateTitles(
-        { topic: topic.trim(), count: 5 },
-        userId,
-        tenantId
+      // 获取 AI 配置用于日志记录
+      const config = await getEffectiveAIConfig(AIModelType.TEXT, userId, tenantId);
+      if (!config) {
+        throw new Error("未找到可用的 AI 配置");
+      }
+
+      // 使用日志包装器调用标题生成
+      const titles = await withUsageLogging(
+        {
+          tenantId: tenantId || "",
+          userId,
+          projectId,
+          modelType: "TEXT",
+          modelConfigId: config.id,
+          taskId: `step-titles-${Date.now()}`,
+        },
+        async () => {
+          const result = await generateTitles(
+            { topic: topic.trim(), count: 5 },
+            userId,
+            tenantId
+          );
+
+          return {
+            result,
+            inputTokens: estimateTokenCount(topic),
+            outputTokens: result.reduce((sum, t) => sum + estimateTokenCount(t.content), 0),
+            requestUrl: config.apiUrl,
+            requestBody: { topic: topic.trim(), count: 5 },
+            responseBody: { titles: result.map(t => t.content) },
+          };
+        }
       );
 
       // 创建或更新标题选择步骤
@@ -84,16 +123,45 @@ async function generateStepContent(
       const selectedTitle = titleStep?.options[0]?.content || "";
       const project = await prisma.project.findUnique({ where: { id: projectId } });
 
-      // 直接调用文案生成函数
-      const copies = await generateCopywriting(
+      // 获取 AI 配置用于日志记录
+      const config = await getEffectiveAIConfig(AIModelType.TEXT, userId, tenantId);
+      if (!config) {
+        throw new Error("未找到可用的 AI 配置");
+      }
+
+      // 使用日志包装器调用文案生成
+      const copies = await withUsageLogging(
         {
-          topic: project?.topic || "",
-          title: selectedTitle,
-          attributes,
-          count: 3,
+          tenantId: tenantId || "",
+          userId,
+          projectId,
+          modelType: "TEXT",
+          modelConfigId: config.id,
+          taskId: `step-copywriting-${Date.now()}`,
         },
-        userId,
-        tenantId
+        async () => {
+          const result = await generateCopywriting(
+            {
+              topic: project?.topic || "",
+              title: selectedTitle,
+              attributes,
+              count: 3,
+            },
+            userId,
+            tenantId
+          );
+
+          return {
+            result,
+            inputTokens: estimateTokenCount(
+              (project?.topic || "") + selectedTitle + JSON.stringify(attributes)
+            ),
+            outputTokens: result.reduce((sum, c) => sum + estimateTokenCount(c.content), 0),
+            requestUrl: config.apiUrl,
+            requestBody: { topic: project?.topic, title: selectedTitle, attributes, count: 3 },
+            responseBody: { copies: result.map(c => c.content) },
+          };
+        }
       );
 
       // 保存属性步骤
