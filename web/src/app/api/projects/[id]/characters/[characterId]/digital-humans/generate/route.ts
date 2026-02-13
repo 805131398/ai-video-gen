@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { generateSingleImage } from "@/lib/ai/image-generator";
+import { logAIUsage } from "@/lib/services/ai-usage-service";
+import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { AIModelType } from "@prisma/client";
 import { randomUUID } from "crypto";
 
 // 存储正在进行的任务（内存中，用于取消功能）
@@ -156,6 +159,9 @@ async function generateDigitalHumansAsync(
   const overallStartTime = Date.now();
 
   try {
+    // 获取 AI 配置（用于日志记录）
+    const config = await getEffectiveAIConfig(AIModelType.IMAGE, userId, tenantId);
+
     // 检查任务是否已取消
     const task = runningTasks.get(batchId);
     if (task?.cancelled) {
@@ -203,10 +209,52 @@ async function generateDigitalHumansAsync(
           console.log(
             `[digital-humans/generate] 第 ${i + 1}/${count} 张数字人已保存，耗时: ${imageElapsed}ms`
           );
+
+          // 记录成功日志
+          if (config) {
+            await logAIUsage({
+              tenantId: tenantId || "",
+              userId,
+              projectId,
+              modelType: "IMAGE",
+              modelConfigId: config.id,
+              inputTokens: prompt.length,
+              outputTokens: 1,
+              cost: 0.02,
+              latencyMs: imageElapsed,
+              status: "SUCCESS",
+              taskId: `digital-human-${batchId}-${i}`,
+              requestUrl: config.apiUrl,
+              requestBody: { prompt, characterId, size },
+              responseBody: { imageUrl: image.imageUrl, digitalHumanId: digitalHuman.id },
+            });
+          }
+
           return digitalHuman;
         }
       } catch (error) {
         console.error(`[digital-humans/generate] 第 ${i + 1}/${count} 张生成失败:`, error);
+
+        // 记录失败日志
+        if (config) {
+          await logAIUsage({
+            tenantId: tenantId || "",
+            userId,
+            projectId,
+            modelType: "IMAGE",
+            modelConfigId: config.id,
+            inputTokens: prompt.length,
+            outputTokens: 0,
+            cost: 0,
+            latencyMs: Date.now() - imageStartTime,
+            status: "FAILED",
+            errorMessage: error instanceof Error ? error.message : "Unknown error",
+            taskId: `digital-human-${batchId}-${i}`,
+            requestUrl: config.apiUrl,
+            requestBody: { prompt, characterId, size },
+          });
+        }
+
         return null;
       }
       return null;
