@@ -691,6 +691,10 @@ model AIUsageLog {
   latencyMs     Int?        @map("latency_ms")
   status        AILogStatus
   errorMessage  String?     @map("error_message") @db.Text
+  requestUrl    String?     @map("request_url")
+  requestBody   Json?       @map("request_body")
+  responseBody  Json?       @map("response_body")
+  taskId        String?     @map("task_id")
   createdAt     DateTime    @default(now()) @map("created_at")
 
   tenant      Tenant?       @relation(fields: [tenantId], references: [id])
@@ -698,6 +702,7 @@ model AIUsageLog {
   project     Project?      @relation(fields: [projectId], references: [id])
   modelConfig AIModelConfig @relation(fields: [modelConfigId], references: [id])
 
+  @@index([taskId])
   @@map("ai_usage_logs")
 }
 
@@ -902,5 +907,28 @@ model ActivationLog {
   @@index([userId])
   @@index([createdAt])
   @@map("activation_logs")
+}
+
+// ==================== API 请求日志 ====================
+
+// API 请求日志表
+model ApiRequestLog {
+  id           String   @id @default(uuid())
+  tenantId     String?  @map("tenant_id")
+  userId       String?  @map("user_id")
+  method       String
+  url          String
+  requestBody  Json?    @map("request_body")
+  responseCode Int      @map("response_code")
+  responseBody Json?    @map("response_body")
+  latencyMs    Int?     @map("latency_ms")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([url])
+  @@index([createdAt])
+  @@map("api_request_logs")
 }
 
