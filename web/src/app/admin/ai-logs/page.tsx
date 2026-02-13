@@ -830,7 +830,7 @@ export default function AILogsPage() {
 
       {/* Expand Dialog for Request/Response */}
       <Dialog open={isExpandDialogOpen} onOpenChange={setIsExpandDialogOpen}>
-        <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[80vw] !max-w-[80vw] h-[80vh] !max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>
