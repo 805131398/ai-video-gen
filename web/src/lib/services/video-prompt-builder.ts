@@ -1,10 +1,16 @@
 import { ScriptScene } from "@/generated/prisma/client";
 import { ProjectCharacter } from "@/generated/prisma/client";
+import { AIModelType } from "@/generated/prisma/enums";
+import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { createAIClient } from "@/lib/ai/client";
+import { logAIUsage } from "@/lib/services/ai-usage-service";
 
 export interface PromptBuildOptions {
   type: "smart_combine" | "ai_optimized";
   scene: ScriptScene;
   characters: ProjectCharacter[];
+  userId?: string;
+  tenantId?: string;
 }
 
 export interface SceneContent {
@@ -126,12 +132,12 @@ export function buildSmartCombinePrompt(
  */
 export async function buildAIOptimizedPrompt(
   scene: ScriptScene,
-  characters: ProjectCharacter[]
+  characters: ProjectCharacter[],
+  userId?: string,
+  tenantId?: string
 ): Promise<string> {
   const basePrompt = buildSmartCombinePrompt(scene, characters);
-
-  // 调用 AI 优化 prompt
-  const optimized = await optimizePromptForVideo(basePrompt);
+  const optimized = await optimizePromptForVideo(basePrompt, userId, tenantId);
   return optimized;
 }
 
@@ -139,53 +145,115 @@ export async function buildAIOptimizedPrompt(
  * 使用 AI 优化视频生成 prompt
  * 将场景信息转换为更适合视频生成的专业描述
  */
-async function optimizePromptForVideo(basePrompt: string): Promise<string> {
+async function optimizePromptForVideo(
+  basePrompt: string,
+  userId?: string,
+  tenantId?: string
+): Promise<string> {
+  const startTime = Date.now();
+
   try {
-    // 这里调用文本生成 AI 来优化 prompt
-    // 可以使用 OpenAI、Claude 等模型
-    const systemPrompt = `You are a professional video prompt engineer. Your task is to optimize prompts for AI video generation.
+    const config = await getEffectiveAIConfig(
+      AIModelType.TEXT,
+      userId,
+      tenantId
+    );
 
-Given a scene description, transform it into a concise, professional video generation prompt that:
-1. Uses cinematic language
-2. Focuses on visual elements
-3. Removes redundant information
-4. Maintains key details (characters, actions, mood, lighting)
-5. Is optimized for AI video generation models like Sora, Runway, or Kling
+    if (!config) {
+      console.warn("未找到 TEXT 类型的 AI 配置，返回基础 prompt");
+      return basePrompt;
+    }
 
-Keep the prompt under 200 words and make it vivid and specific.`;
+    const client = createAIClient({
+      apiUrl: config.apiUrl,
+      apiKey: config.apiKey,
+      modelName: config.modelName,
+      config: config.config as Record<string, unknown> | undefined,
+    });
 
-    const userPrompt = `Optimize this scene description for video generation:\n\n${basePrompt}`;
+    const systemPrompt = `You are a professional video prompt engineer specializing in AI video generation (Kling, Sora, Runway, etc.).
 
-    // TODO: 实际调用 AI API
-    // 这里需要集成实际的 AI 服务
-    // 暂时返回基础 prompt
-    console.log("AI optimization not implemented yet, using base prompt");
-    return basePrompt;
+Your task: transform a structured scene description into a vivid, cinematic video generation prompt.
 
-    // 示例实现（需要实际的 AI 配置）:
-    // const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-    //   },
-    //   body: JSON.stringify({
-    //     model: 'gpt-4',
-    //     messages: [
-    //       { role: 'system', content: systemPrompt },
-    //       { role: 'user', content: userPrompt }
-    //     ],
-    //     temperature: 0.7,
-    //     max_tokens: 300
-    //   })
-    // });
-    // const data = await response.json();
-    // return data.choices[0].message.content;
+Rules:
+1. Output in English only
+2. Use professional cinematic terminology: shot types (close-up, wide shot, tracking shot), camera movements (dolly in, crane up, pan left), lighting terms (rim light, chiaroscuro, golden hour glow)
+3. Add rich visual details: textures, colors, atmosphere, depth of field, motion blur
+4. Keep the core scene content (characters, actions, dialogues, mood) intact
+5. Write as a single flowing paragraph, no bullet points or labels
+6. Keep it under 200 words
+7. Be creative — each time you write, vary the descriptive details and word choices while preserving the scene's meaning
+8. Do NOT include any explanation or preamble, output the prompt only`;
+
+    const userPrompt = `Transform this scene description into a cinematic video generation prompt:\n\n${basePrompt}`;
+
+    const optimized = await client.generateText(userPrompt, systemPrompt, {
+      temperature: 0.8,
+      maxTokens: 400,
+    });
+
+    const result = optimized.trim();
+    if (!result) {
+      console.warn("AI 返回空结果，降级使用基础 prompt");
+      return basePrompt;
+    }
+
+    // 记录成功日志
+    await logAIUsage({
+      tenantId: tenantId || "",
+      userId: userId || "",
+      modelType: "TEXT",
+      modelConfigId: config.id,
+      inputTokens: estimateTokenCount(systemPrompt + userPrompt),
+      outputTokens: estimateTokenCount(result),
+      cost: 0.01, // TEXT 类型成本
+      latencyMs: Date.now() - startTime,
+      status: "SUCCESS",
+      taskId: `video-prompt-optimize-${Date.now()}`,
+      requestUrl: config.apiUrl,
+      requestBody: { systemPrompt, userPrompt, basePrompt },
+      responseBody: { optimizedPrompt: result },
+    });
+
+    return result;
   } catch (error) {
-    console.error("Failed to optimize prompt with AI:", error);
-    // 如果优化失败，返回基础 prompt
+    console.error("AI 优化 prompt 失败，降级使用基础 prompt:", error);
+
+    // 记录失败日志
+    const config = await getEffectiveAIConfig(
+      AIModelType.TEXT,
+      userId,
+      tenantId
+    );
+    if (config) {
+      await logAIUsage({
+        tenantId: tenantId || "",
+        userId: userId || "",
+        modelType: "TEXT",
+        modelConfigId: config.id,
+        inputTokens: estimateTokenCount(basePrompt),
+        outputTokens: 0,
+        cost: 0,
+        latencyMs: Date.now() - startTime,
+        status: "FAILED",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        taskId: `video-prompt-optimize-${Date.now()}`,
+        requestUrl: config.apiUrl,
+        requestBody: { basePrompt },
+      });
+    }
+
     return basePrompt;
   }
+}
+
+/**
+ * Token 估算函数
+ */
+function estimateTokenCount(text: string): number {
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+  return Math.ceil(chineseChars / 1.5 + otherChars / 4);
 }
 
 /**
@@ -195,12 +263,12 @@ Keep the prompt under 200 words and make it vivid and specific.`;
 export async function buildVideoPrompt(
   options: PromptBuildOptions
 ): Promise<string> {
-  const { type, scene, characters } = options;
+  const { type, scene, characters, userId, tenantId } = options;
 
   if (type === "smart_combine") {
     return buildSmartCombinePrompt(scene, characters);
   } else if (type === "ai_optimized") {
-    return await buildAIOptimizedPrompt(scene, characters);
+    return await buildAIOptimizedPrompt(scene, characters, userId, tenantId);
   }
 
   throw new Error(`Unknown prompt type: ${type}`);
