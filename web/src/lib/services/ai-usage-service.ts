@@ -13,6 +13,7 @@ interface LogAIUsageParams {
   latencyMs: number;
   status: AILogStatus;
   errorMessage?: string;
+  taskId?: string;
 }
 
 /**
@@ -33,6 +34,7 @@ export async function logAIUsage(params: LogAIUsageParams) {
         latencyMs: params.latencyMs,
         status: params.status,
         errorMessage: params.errorMessage,
+        taskId: params.taskId,
       },
     });
     return log;
