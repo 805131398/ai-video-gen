@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateImages, generateImagePromptFromCopy } from "@/lib/ai/image-generator";
+import { withUsageLogging } from "@/lib/services/ai-usage-service";
+import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { AIModelType } from "@prisma/client";
 
 // POST /api/ai/images - 生成图片
 export async function POST(request: NextRequest) {
@@ -11,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { prompt, copywriting, count, size, style, negativePrompt } = body;
+    const { prompt, copywriting, count, size, style, negativePrompt, projectId } = body;
 
     let finalPrompt = prompt;
 
@@ -30,10 +33,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "提示词不能为空" }, { status: 400 });
     }
 
-    const images = await generateImages(
-      { prompt: finalPrompt, negativePrompt, count, size, style },
-      session.user.id,
-      session.user.tenantId
+    const config = await getEffectiveAIConfig(AIModelType.IMAGE, session.user.id, session.user.tenantId);
+    if (!config) {
+      return NextResponse.json({ error: "未找到可用的 AI 配置" }, { status: 500 });
+    }
+
+    const images = await withUsageLogging(
+      {
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        projectId: projectId,
+        modelType: "IMAGE",
+        modelConfigId: config.id,
+        taskId: `images-${Date.now()}`,
+      },
+      async () => {
+        const result = await generateImages(
+          { prompt: finalPrompt, negativePrompt, count, size, style },
+          session.user.id,
+          session.user.tenantId
+        );
+
+        return {
+          result,
+          inputTokens: finalPrompt.length, // 图片以字符数计
+          outputTokens: result.length, // 输出图片数量
+          requestUrl: config.apiUrl,
+          requestBody: { prompt: finalPrompt, count, size, style, negativePrompt },
+          responseBody: { images: result },
+        };
+      }
     );
 
     return NextResponse.json({ data: images });
