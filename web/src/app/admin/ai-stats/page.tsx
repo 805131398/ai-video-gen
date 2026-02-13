@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Activity, DollarSign, CheckCircle, XCircle, Clock, Zap } from "lucide-react";
+import { Activity, DollarSign, CheckCircle, XCircle, Clock, Zap, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface AIStats {
@@ -287,8 +288,14 @@ export default function AIStatsPage() {
       {/* Recent Logs */}
       {stats && stats.recentLogs.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">最近调用记录</CardTitle>
+            <Link
+              href="/admin/ai-logs"
+              className="text-sm text-blue-500 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+            >
+              查看全部 <ExternalLink className="h-3 w-3" />
+            </Link>
           </CardHeader>
           <CardContent>
             <Table>
@@ -302,6 +309,7 @@ export default function AIStatsPage() {
                   <TableHead className="text-right">延迟</TableHead>
                   <TableHead className="text-right">费用</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -336,6 +344,14 @@ export default function AIStatsPage() {
                       ) : (
                         <XCircle className="h-4 w-4 text-red-500" />
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/admin/ai-logs?highlight=${log.id}`}
+                        className="text-blue-500 hover:text-blue-700 text-xs cursor-pointer"
+                      >
+                        详情
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}
