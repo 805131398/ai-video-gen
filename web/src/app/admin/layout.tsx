@@ -36,6 +36,12 @@ const staticMenuItems: MenuItem[] = [
         href: "/admin/ai-stats",
       },
       {
+        id: "ai-logs",
+        label: "调用日志",
+        icon: "ScrollText",
+        href: "/admin/ai-logs",
+      },
+      {
         id: "ai-projects",
         label: "作品管理",
         icon: "FolderVideo",
