@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { withUsageLogging } from "@/lib/services/ai-usage-service";
 import { AIModelType } from "@/generated/prisma/enums";
 import { createAIClient } from "@/lib/ai/client";
+
+// Token 估算辅助函数
+function estimateTokenCount(text: string): number {
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+  return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+}
 
 // POST /api/projects/[id]/scripts/generate-synopsis - AI 生成脚本大概
 export async function POST(
@@ -129,13 +137,34 @@ ${characterDescriptions}
 
 ${existingSynopsis ? `用户已输入的内容：\n${existingSynopsis}\n\n请基于用户已输入的内容进行扩展、续写或完善，保持风格和内容的连贯性。如果用户输入的内容已经比较完整，可以适当润色并确保添加结尾引导话术。\n\n` : ""}请生成剧本大概：`;
 
-    // 调用 AI 生成
-    const client = createAIClient(config);
-    const synopsis = await client.generateText(prompt, systemPrompt, {
-      temperature: 0.7,
-    });
+    // 调用 AI 生成（带日志记录）
+    const synopsis = await withUsageLogging(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        projectId: id,
+        modelType: "TEXT",
+        modelConfigId: config.id,
+        taskId: `synopsis-${Date.now()}`,
+      },
+      async () => {
+        const client = createAIClient(config);
+        const result = await client.generateText(prompt, systemPrompt, {
+          temperature: 0.7,
+        });
 
-    return NextResponse.json({ synopsis: synopsis.trim() });
+        return {
+          result: result.trim(),
+          inputTokens: estimateTokenCount(prompt + systemPrompt),
+          outputTokens: estimateTokenCount(result),
+          requestUrl: config.apiUrl,
+          requestBody: { prompt, systemPrompt, characterIds, tone },
+          responseBody: { synopsis: result.trim() },
+        };
+      }
+    );
+
+    return NextResponse.json({ synopsis });
   } catch (error) {
     console.error("生成脚本大概失败:", error);
     const message = error instanceof Error ? error.message : "生成失败";
