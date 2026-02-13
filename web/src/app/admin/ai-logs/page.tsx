@@ -40,10 +40,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/admin";
+import { Maximize2, Copy, Check } from "lucide-react";
 
 // Types
 interface LogItem {
@@ -114,6 +122,14 @@ export default function AILogsPage() {
   const [selectedLog, setSelectedLog] = useState<LogDetail | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+  // Expand dialog state for request/response
+  const [expandedContent, setExpandedContent] = useState<{
+    type: "request" | "response";
+    content: any;
+  } | null>(null);
+  const [isExpandDialogOpen, setIsExpandDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Filter state
   const [timeRange, setTimeRange] = useState("week");
@@ -276,6 +292,24 @@ export default function AILogsPage() {
         );
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  // Handle expand content
+  const handleExpandContent = (type: "request" | "response", content: any) => {
+    setExpandedContent({ type, content });
+    setIsExpandDialogOpen(true);
+    setCopied(false);
+  };
+
+  // Copy to clipboard
+  const handleCopy = async (content: any) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(content, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("复制失败:", err);
     }
   };
 
@@ -579,188 +613,291 @@ export default function AILogsPage() {
       <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <SheetContent className="!max-w-3xl !w-[60vw] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+            <SheetTitle className="flex items-center gap-2 text-xl">
               日志详情
               {selectedLog && getStatusBadge(selectedLog.status)}
             </SheetTitle>
             {selectedLog && (
-              <SheetDescription className="font-mono text-xs">
-                {selectedLog.id}
+              <SheetDescription className="font-mono text-xs text-slate-500">
+                ID: {selectedLog.id}
               </SheetDescription>
             )}
           </SheetHeader>
 
           {isDetailLoading ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-full py-20">
               <div className="text-slate-500">加载中...</div>
             </div>
           ) : selectedLog ? (
-            <div className="mt-6 space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">
-                    基本信息
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-slate-500 mb-1">调用时间</div>
-                      <div className="font-medium">
-                        {format(
-                          new Date(selectedLog.createdAt),
-                          "yyyy-MM-dd HH:mm:ss",
-                          { locale: zhCN }
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">模型类型</div>
-                      <div className="font-medium">{selectedLog.modelType}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">模型提供商</div>
-                      <div className="font-medium">
-                        {selectedLog.modelConfig.providerName}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">模型名称</div>
-                      <div className="font-medium">
-                        {selectedLog.modelConfig.modelName}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">用户</div>
-                      <div className="font-medium">
-                        {selectedLog.user.name || selectedLog.user.email}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">项目</div>
-                      <div className="font-medium">
-                        {selectedLog.project?.title || "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">输入 Token</div>
-                      <div className="font-medium">
-                        {selectedLog.inputTokens?.toLocaleString() || "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">输出 Token</div>
-                      <div className="font-medium">
-                        {selectedLog.outputTokens?.toLocaleString() || "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">延迟</div>
-                      <div className="font-medium">
-                        {selectedLog.latencyMs
-                          ? `${selectedLog.latencyMs}ms`
-                          : "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 mb-1">费用</div>
-                      <div className="font-medium">
-                        {selectedLog.cost
-                          ? `¥${selectedLog.cost.toFixed(4)}`
-                          : "-"}
-                      </div>
-                    </div>
-                  </div>
+            <div className="mt-8 space-y-6">
+              {/* Basic Info Card */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                  基本信息
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <InfoItem
+                    label="调用时间"
+                    value={format(
+                      new Date(selectedLog.createdAt),
+                      "yyyy-MM-dd HH:mm:ss",
+                      { locale: zhCN }
+                    )}
+                  />
+                  <InfoItem label="模型类型" value={selectedLog.modelType} />
+                  <InfoItem
+                    label="模型提供商"
+                    value={selectedLog.modelConfig.providerName}
+                  />
+                  <InfoItem
+                    label="模型名称"
+                    value={selectedLog.modelConfig.modelName}
+                  />
+                  <InfoItem
+                    label="用户"
+                    value={selectedLog.user.name || selectedLog.user.email}
+                  />
+                  <InfoItem
+                    label="项目"
+                    value={selectedLog.project?.title || "-"}
+                  />
                 </div>
+              </div>
 
-                {/* Task ID */}
-                {selectedLog.taskId && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">
-                      任务关联
-                    </h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-xs text-slate-500 mb-1">
-                            任务 ID
-                          </div>
-                          <code className="text-xs font-mono text-slate-900">
-                            {selectedLog.taskId}
-                          </code>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => filterByTaskId(selectedLog.taskId!)}
-                          className="text-xs"
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          查看同任务日志
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              {/* Performance Metrics Card */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-purple-500 rounded-full" />
+                  性能指标
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <MetricItem
+                    label="输入 Token"
+                    value={selectedLog.inputTokens?.toLocaleString() || "-"}
+                    icon="📥"
+                  />
+                  <MetricItem
+                    label="输出 Token"
+                    value={selectedLog.outputTokens?.toLocaleString() || "-"}
+                    icon="📤"
+                  />
+                  <MetricItem
+                    label="延迟"
+                    value={
+                      selectedLog.latencyMs ? `${selectedLog.latencyMs}ms` : "-"
+                    }
+                    icon="⚡"
+                  />
+                  <MetricItem
+                    label="费用"
+                    value={
+                      selectedLog.cost ? `¥${selectedLog.cost.toFixed(4)}` : "-"
+                    }
+                    icon="💰"
+                  />
+                </div>
+              </div>
 
-                {/* Request */}
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">
-                    请求信息
+              {/* Task ID Card */}
+              {selectedLog.taskId && (
+                <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                    任务关联
                   </h3>
-                  {selectedLog.requestUrl && (
-                    <div className="mb-3">
-                      <div className="text-xs text-slate-500 mb-1">
-                        请求 URL
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-slate-500 mb-2">
+                        任务 ID
                       </div>
-                      <code className="text-xs font-mono bg-slate-100 px-2 py-1 rounded">
-                        {selectedLog.requestUrl}
+                      <code className="text-sm font-mono text-slate-900 bg-white px-3 py-1.5 rounded-lg border border-blue-200">
+                        {selectedLog.taskId}
                       </code>
                     </div>
-                  )}
-                  {selectedLog.requestBody && (
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">
-                        请求体
-                      </div>
-                      <pre className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg overflow-auto max-h-96 text-xs border border-slate-200">
-                        {JSON.stringify(selectedLog.requestBody, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => filterByTaskId(selectedLog.taskId!)}
+                      className="text-xs border-blue-300 hover:bg-blue-50 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      查看同任务日志
+                    </Button>
+                  </div>
                 </div>
+              )}
 
-                {/* Response */}
-                {selectedLog.responseBody && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">
-                      响应信息
-                    </h3>
-                    <pre className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg overflow-auto max-h-96 text-xs border border-slate-200">
-                      {JSON.stringify(selectedLog.responseBody, null, 2)}
-                    </pre>
+              {/* Request Card */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+                  请求信息
+                </h3>
+                {selectedLog.requestUrl && (
+                  <div className="mb-4">
+                    <div className="text-xs text-slate-500 mb-2">请求 URL</div>
+                    <code className="text-xs font-mono bg-white px-3 py-2 rounded-lg block border border-emerald-200 break-all">
+                      {selectedLog.requestUrl}
+                    </code>
                   </div>
                 )}
-
-                {/* Error */}
-                {selectedLog.errorMessage && (
+                {selectedLog.requestBody && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">
-                      错误信息
-                    </h3>
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-sm text-red-900 break-words">
-                          {selectedLog.errorMessage}
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-slate-500">请求体</div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleExpandContent("request", selectedLog.requestBody)
+                        }
+                        className="h-7 text-xs hover:bg-emerald-100 cursor-pointer"
+                      >
+                        <Maximize2 className="w-3 h-3 mr-1" />
+                        放大查看
+                      </Button>
+                    </div>
+                    <div
+                      onClick={() =>
+                        handleExpandContent("request", selectedLog.requestBody)
+                      }
+                      className="bg-white p-4 rounded-lg overflow-auto max-h-48 text-xs border border-emerald-200 font-mono cursor-pointer hover:border-emerald-400 transition-colors"
+                    >
+                      <pre className="text-slate-700">
+                        {JSON.stringify(selectedLog.requestBody, null, 2)}
+                      </pre>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Response Card */}
+              {selectedLog.responseBody && (
+                <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                    响应信息
+                  </h3>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-slate-500">响应体</div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleExpandContent("response", selectedLog.responseBody)
+                        }
+                        className="h-7 text-xs hover:bg-blue-100 cursor-pointer"
+                      >
+                        <Maximize2 className="w-3 h-3 mr-1" />
+                        放大查看
+                      </Button>
+                    </div>
+                    <div
+                      onClick={() =>
+                        handleExpandContent("response", selectedLog.responseBody)
+                      }
+                      className="bg-white p-4 rounded-lg overflow-auto max-h-48 text-xs border border-blue-200 font-mono cursor-pointer hover:border-blue-400 transition-colors"
+                    >
+                      <pre className="text-slate-700">
+                        {JSON.stringify(selectedLog.responseBody, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Card */}
+              {selectedLog.errorMessage && (
+                <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-red-500 rounded-full" />
+                    错误信息
+                  </h3>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-900 break-words leading-relaxed bg-white p-4 rounded-lg border border-red-200 flex-1">
+                      {selectedLog.errorMessage}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {/* Expand Dialog for Request/Response */}
+      <Dialog open={isExpandDialogOpen} onOpenChange={setIsExpandDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>
+                {expandedContent?.type === "request" ? "请求信息" : "响应信息"}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopy(expandedContent?.content)}
+                className="h-8 cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 mr-1" />
+                    已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 mr-1" />
+                    复制
+                  </>
+                )}
+              </Button>
+            </DialogTitle>
+            <DialogDescription>
+              完整的 JSON {expandedContent?.type === "request" ? "请求" : "响应"}
+              数据
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto mt-4">
+            <pre className="bg-slate-900 text-slate-100 p-6 rounded-lg text-sm font-mono overflow-auto">
+              {expandedContent &&
+                JSON.stringify(expandedContent.content, null, 2)}
+            </pre>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Helper Components
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-slate-500 mb-1.5">{label}</div>
+      <div className="font-medium text-slate-900 text-sm">{value}</div>
+    </div>
+  );
+}
+
+function MetricItem({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+}) {
+  return (
+    <div className="bg-white rounded-lg p-3 border border-slate-200">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-sm">{icon}</span>
+        <div className="text-xs text-slate-500">{label}</div>
+      </div>
+      <div className="font-semibold text-slate-900 text-base">{value}</div>
     </div>
   );
 }
