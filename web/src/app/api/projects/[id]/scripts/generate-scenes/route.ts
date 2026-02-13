@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { withUsageLogging } from "@/lib/services/ai-usage-service";
 import { AIModelType } from "@/generated/prisma/enums";
 import { createAIClient } from "@/lib/ai/client";
 import { transformAISceneToComplete } from "@/lib/utils/scene-transformer";
+
+// Token 估算辅助函数
+function estimateTokenCount(text: string): number {
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+  return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+}
 
 /**
  * 验证场景内容是否为完整结构
@@ -276,11 +284,32 @@ ${characterDescriptions || "无（请补充角色ID、名称、设定）"}
 
 请严格按照要求生成${sceneCount || 3}个场景，仅输出JSON数组：`;
 
-    // 调用 AI 生成
-    const client = createAIClient(config);
-    const response = await client.generateText(prompt, systemPrompt, {
-      temperature: 0.7,
-    });
+    // 调用 AI 生成（带日志记录）
+    const response = await withUsageLogging(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        projectId: id,
+        modelType: "TEXT",
+        modelConfigId: config.id,
+        taskId: `scenes-${Date.now()}`,
+      },
+      async () => {
+        const client = createAIClient(config);
+        const result = await client.generateText(prompt, systemPrompt, {
+          temperature: 0.7,
+        });
+
+        return {
+          result,
+          inputTokens: estimateTokenCount(prompt + systemPrompt),
+          outputTokens: estimateTokenCount(result),
+          requestUrl: config.apiUrl,
+          requestBody: { prompt, systemPrompt, synopsis, sceneCount },
+          responseBody: { scenes: result },
+        };
+      }
+    );
 
     // 解析 JSON 响应
     let scenes: GeneratedScene[] = [];
