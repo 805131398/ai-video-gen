@@ -10,6 +10,7 @@
 import { prisma } from "@/lib/prisma";
 import { createVideoClient } from "@/lib/ai/video-client";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
+import { logAIUsage } from "@/lib/services/ai-usage-service";
 
 // 正在轮询的任务集合（防止重复轮询）
 const activePollingTasks = new Set<string>();
@@ -269,6 +270,40 @@ export async function pollVideoStatus(
     `[VideoPollingService] Started polling for task ${videoId} (taskId: ${taskId})`
   );
 
+  // 获取视频记录信息（用于日志记录）
+  const videoRecord = await prisma.sceneVideo.findUnique({
+    where: { id: videoId },
+    include: {
+      scene: {
+        include: {
+          script: {
+            include: {
+              project: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!videoRecord) {
+    console.error(`[VideoPollingService] Video record ${videoId} not found`);
+    activePollingTasks.delete(videoId);
+    return;
+  }
+
+  const userId = videoRecord.scene.script.project.userId;
+  const tenantId = videoRecord.scene.script.project.user.tenantId;
+  const projectId = videoRecord.scene.script.projectId;
+  const videoStartTime = videoRecord.createdAt.getTime();
+
+  // 获取 AI 配置
+  const config = await getEffectiveAIConfig("VIDEO" as any, userId, tenantId);
+
   const maxAttempts = 120; // 最多轮询 120 次（10 分钟，每 5 秒一次）
   let attempts = 0;
 
@@ -291,7 +326,14 @@ export async function pollVideoStatus(
         });
 
         if (status.status === "completed") {
-          // 生成成功，更新视频记录
+          // 生成成功，先读取原始 metadata 再合并
+          const existingVideo = await prisma.sceneVideo.findUnique({
+            where: { id: videoId },
+            select: { metadata: true },
+          });
+          const originalMetadata = (existingVideo?.metadata as Record<string, unknown>) || {};
+          const aiMetadata = status.metadata || {};
+
           await prisma.sceneVideo.update({
             where: { id: videoId },
             data: {
@@ -300,13 +342,41 @@ export async function pollVideoStatus(
               videoUrl: status.videoUrl,
               thumbnailUrl: status.thumbnailUrl,
               duration: status.duration,
-              metadata: status.metadata || {},
+              metadata: {
+                ...originalMetadata,
+                ...aiMetadata,
+              },
             },
           });
 
           console.log(
             `[VideoPollingService] Video generated successfully for task ${videoId}`
           );
+
+          // 记录成功日志
+          if (config) {
+            const duration = status.duration || 10;
+            await logAIUsage({
+              tenantId: tenantId || "",
+              userId,
+              projectId,
+              modelType: "VIDEO",
+              modelConfigId: config.id,
+              inputTokens: videoRecord.prompt.length,
+              outputTokens: duration, // 以秒数作为输出
+              cost: duration <= 10 ? 0.05 : 0.075, // 10s=$0.05, 15s=$0.075
+              latencyMs: Date.now() - videoStartTime,
+              status: "SUCCESS",
+              taskId: taskId,
+              requestUrl: config.apiUrl,
+              requestBody: { prompt: videoRecord.prompt, duration },
+              responseBody: {
+                videoUrl: status.videoUrl,
+                duration: status.duration,
+              },
+            });
+          }
+
           break;
         } else if (status.status === "failed") {
           // 生成失败
@@ -322,6 +392,27 @@ export async function pollVideoStatus(
           console.error(
             `[VideoPollingService] Video generation failed for task ${videoId}`
           );
+
+          // 记录失败日志
+          if (config) {
+            await logAIUsage({
+              tenantId: tenantId || "",
+              userId,
+              projectId,
+              modelType: "VIDEO",
+              modelConfigId: config.id,
+              inputTokens: videoRecord.prompt.length,
+              outputTokens: 0,
+              cost: 0,
+              latencyMs: Date.now() - videoStartTime,
+              status: "FAILED",
+              errorMessage: status.message || "视频生成失败",
+              taskId: taskId,
+              requestUrl: config.apiUrl,
+              requestBody: { prompt: videoRecord.prompt },
+            });
+          }
+
           break;
         }
 
@@ -356,6 +447,26 @@ export async function pollVideoStatus(
           errorMessage: "视频生成超时（超过 10 分钟）",
         },
       });
+
+      // 记录超时失败日志
+      if (config) {
+        await logAIUsage({
+          tenantId: tenantId || "",
+          userId,
+          projectId,
+          modelType: "VIDEO",
+          modelConfigId: config.id,
+          inputTokens: videoRecord.prompt.length,
+          outputTokens: 0,
+          cost: 0,
+          latencyMs: Date.now() - videoStartTime,
+          status: "FAILED",
+          errorMessage: "视频生成超时（超过 10 分钟）",
+          taskId: taskId,
+          requestUrl: config.apiUrl,
+          requestBody: { prompt: videoRecord.prompt },
+        });
+      }
     }
   } finally {
     // 移除活跃任务标记
