@@ -830,7 +830,7 @@ export default function AILogsPage() {
 
       {/* Expand Dialog for Request/Response */}
       <Dialog open={isExpandDialogOpen} onOpenChange={setIsExpandDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>
@@ -861,7 +861,7 @@ export default function AILogsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-auto mt-4">
-            <pre className="bg-slate-900 text-slate-100 p-6 rounded-lg text-sm font-mono overflow-auto">
+            <pre className="bg-slate-900 text-slate-100 p-6 rounded-lg text-sm font-mono overflow-auto h-full">
               {expandedContent &&
                 JSON.stringify(expandedContent.content, null, 2)}
             </pre>
