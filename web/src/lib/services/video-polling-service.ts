@@ -362,17 +362,25 @@ export async function pollVideoStatus(
               projectId,
               modelType: "VIDEO",
               modelConfigId: config.id,
-              inputTokens: videoRecord.prompt.length,
-              outputTokens: duration, // 以秒数作为输出
-              cost: duration <= 10 ? 0.05 : 0.075, // 10s=$0.05, 15s=$0.075
+              inputTokens: 0,
+              outputTokens: duration,
+              cost: duration <= 10 ? 0.05 : 0.075,
               latencyMs: Date.now() - videoStartTime,
               status: "SUCCESS",
               taskId: taskId,
-              requestUrl: config.apiUrl,
-              requestBody: { prompt: videoRecord.prompt, duration },
+              requestUrl: `${config.apiUrl}/status/${taskId}`,
+              requestBody: {
+                type: "polling_result",
+                taskId,
+                videoId,
+                totalPollingAttempts: attempts,
+              },
               responseBody: {
+                type: "polling_result",
                 videoUrl: status.videoUrl,
+                thumbnailUrl: status.thumbnailUrl,
                 duration: status.duration,
+                metadata: status.metadata,
               },
             });
           }
@@ -401,15 +409,25 @@ export async function pollVideoStatus(
               projectId,
               modelType: "VIDEO",
               modelConfigId: config.id,
-              inputTokens: videoRecord.prompt.length,
+              inputTokens: 0,
               outputTokens: 0,
               cost: 0,
               latencyMs: Date.now() - videoStartTime,
               status: "FAILED",
               errorMessage: status.message || "视频生成失败",
               taskId: taskId,
-              requestUrl: config.apiUrl,
-              requestBody: { prompt: videoRecord.prompt },
+              requestUrl: `${config.apiUrl}/status/${taskId}`,
+              requestBody: {
+                type: "polling_result",
+                taskId,
+                videoId,
+                totalPollingAttempts: attempts,
+              },
+              responseBody: {
+                type: "polling_result",
+                message: status.message,
+                status: status.status,
+              },
             });
           }
 
@@ -456,15 +474,24 @@ export async function pollVideoStatus(
           projectId,
           modelType: "VIDEO",
           modelConfigId: config.id,
-          inputTokens: videoRecord.prompt.length,
+          inputTokens: 0,
           outputTokens: 0,
           cost: 0,
           latencyMs: Date.now() - videoStartTime,
           status: "FAILED",
           errorMessage: "视频生成超时（超过 10 分钟）",
           taskId: taskId,
-          requestUrl: config.apiUrl,
-          requestBody: { prompt: videoRecord.prompt },
+          requestUrl: `${config.apiUrl}/status/${taskId}`,
+          requestBody: {
+            type: "polling_result",
+            taskId,
+            videoId,
+            totalPollingAttempts: attempts,
+          },
+          responseBody: {
+            type: "polling_result",
+            message: "timeout",
+          },
         });
       }
     }

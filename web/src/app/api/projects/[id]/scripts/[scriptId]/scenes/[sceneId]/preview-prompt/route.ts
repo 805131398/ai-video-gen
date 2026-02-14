@@ -7,6 +7,8 @@ interface PreviewPromptRequest {
   promptType?: "smart_combine" | "ai_optimized";
   useStoryboard?: boolean;
   useCharacterImage?: boolean;
+  withVoice?: boolean;
+  voiceLanguage?: "zh" | "en";
 }
 
 /**
@@ -32,6 +34,8 @@ export async function POST(
     const promptType = body.promptType || "smart_combine";
     const useStoryboard = body.useStoryboard || false;
     const useCharacterImage = body.useCharacterImage !== false;
+    const withVoice = body.withVoice !== false; // 默认 true
+    const voiceLanguage = body.voiceLanguage || "zh"; // 默认中文
 
     // 查询场景（含项目和角色）
     const scene = await prisma.scriptScene.findFirst({
@@ -66,9 +70,10 @@ export async function POST(
     const finalDuration = requestedDuration <= 12 ? 10 : 15;
 
     // 构建提示词
-    let prompt: string;
+    let prompt: { en: string; zh: string };
     if (useStoryboard) {
-      prompt = buildSceneStoryboardPrompt(scene, finalDuration);
+      const storyboard = buildSceneStoryboardPrompt(scene, finalDuration);
+      prompt = { en: storyboard, zh: "" };
     } else {
       prompt = await buildVideoPrompt({
         type: promptType,
@@ -76,6 +81,8 @@ export async function POST(
         characters: scene.script.project.characters,
         userId: user.id,
         tenantId: user.tenantId,
+        withVoice,
+        voiceLanguage,
       });
     }
 

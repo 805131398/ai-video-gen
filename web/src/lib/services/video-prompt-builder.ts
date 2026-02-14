@@ -11,6 +11,13 @@ export interface PromptBuildOptions {
   characters: ProjectCharacter[];
   userId?: string;
   tenantId?: string;
+  withVoice?: boolean;
+  voiceLanguage?: "zh" | "en";
+}
+
+export interface BilingualPrompt {
+  en: string;
+  zh: string;
 }
 
 export interface SceneContent {
@@ -54,7 +61,9 @@ export interface SceneContent {
  */
 export function buildSmartCombinePrompt(
   scene: ScriptScene,
-  characters: ProjectCharacter[]
+  characters: ProjectCharacter[],
+  withVoice?: boolean,
+  voiceLanguage?: "zh" | "en"
 ): string {
   const content = scene.content as SceneContent;
 
@@ -72,7 +81,7 @@ export function buildSmartCombinePrompt(
       .filter(Boolean)
       .join(", ") || "";
 
-  // 组合格式：[镜头] [场景描述] [角色] [动作] [对话] [视觉效果] [光照]
+  // 组合格式
   const parts: string[] = [];
 
   // 1. 镜头信息
@@ -95,12 +104,24 @@ export function buildSmartCombinePrompt(
     parts.push(`Action: ${content.actions.main}`);
   }
 
-  // 5. 对话（如果有）
-  if (content.dialogues && content.dialogues.length > 0) {
-    const dialogueText = content.dialogues
-      .map((d) => `${d.speaker}: "${d.text}"`)
-      .join("; ");
-    parts.push(`Dialogue: ${dialogueText}`);
+  // 5. 对话（根据声音设置决定）
+  if (withVoice !== false && content.dialogues && content.dialogues.length > 0) {
+    if (voiceLanguage === "en") {
+      // 英文语音：台词保持原文
+      const dialogueText = content.dialogues
+        .map((d) => `${d.speaker}: "${d.text}"`)
+        .join("; ");
+      parts.push(`[Dialogue] ${dialogueText}`);
+    } else {
+      // 中文语音（默认）：英文指令 + 中文台词
+      const dialogueText = content.dialogues
+        .map((d) => `${d.speaker}: "${d.text}"`)
+        .join("; ");
+      parts.push(`[Speaking in Chinese] ${dialogueText}`);
+    }
+    parts.push(
+      "The character must be shown speaking on screen with matching lip movements"
+    );
   }
 
   // 6. 视觉效果
@@ -128,28 +149,33 @@ export function buildSmartCombinePrompt(
 
 /**
  * 方式 C：AI 优化 prompt
- * 先组合基础信息，然后调用 AI 优化 prompt
+ * 先组合基础信息，然后调用 AI 优化 prompt，返回中英双语
  */
 export async function buildAIOptimizedPrompt(
   scene: ScriptScene,
   characters: ProjectCharacter[],
   userId?: string,
-  tenantId?: string
-): Promise<string> {
-  const basePrompt = buildSmartCombinePrompt(scene, characters);
-  const optimized = await optimizePromptForVideo(basePrompt, userId, tenantId);
+  tenantId?: string,
+  withVoice?: boolean,
+  voiceLanguage?: "zh" | "en"
+): Promise<BilingualPrompt> {
+  const basePrompt = buildSmartCombinePrompt(scene, characters, withVoice, voiceLanguage);
+  const optimized = await optimizePromptForVideo(basePrompt, userId, tenantId, withVoice, voiceLanguage);
   return optimized;
 }
 
 /**
  * 使用 AI 优化视频生成 prompt
- * 将场景信息转换为更适合视频生成的专业描述
+ * 将场景信息转换为更适合视频生成的专业描述，返回中英双语
  */
 async function optimizePromptForVideo(
   basePrompt: string,
   userId?: string,
-  tenantId?: string
-): Promise<string> {
+  tenantId?: string,
+  withVoice?: boolean,
+  voiceLanguage?: "zh" | "en"
+): Promise<BilingualPrompt> {
+  const fallback: BilingualPrompt = { en: basePrompt, zh: "" };
   const startTime = Date.now();
 
   try {
@@ -161,7 +187,7 @@ async function optimizePromptForVideo(
 
     if (!config) {
       console.warn("未找到 TEXT 类型的 AI 配置，返回基础 prompt");
-      return basePrompt;
+      return fallback;
     }
 
     const client = createAIClient({
@@ -171,31 +197,74 @@ async function optimizePromptForVideo(
       config: config.config as Record<string, unknown> | undefined,
     });
 
+    // 根据声音设置构建额外规则
+    let voiceRules: string;
+    if (withVoice === false) {
+      voiceRules = `9. This is a silent/visual-only video. Do NOT include any dialogue or spoken text. Focus entirely on visual storytelling, actions, and cinematography.`;
+    } else if (voiceLanguage === "en") {
+      voiceRules = `9. This video requires voice acting. You MUST include ALL character dialogues using this exact format: [Dialogue] CharacterName: "dialogue content"
+10. The character MUST be shown speaking on screen with matching lip movements
+11. Preserve the dialogue content exactly as provided, do not omit or summarize it`;
+    } else {
+      // 默认中文语音
+      voiceRules = `9. This video requires voice acting in Chinese. You MUST include ALL character dialogues using this exact format: [Speaking in Chinese] CharacterName: "台词内容"
+10. The character MUST be shown speaking on screen with matching lip movements
+11. All spoken dialogue must be in Chinese (Mandarin). Do NOT translate the Chinese dialogue to English
+12. Keep the dialogue text in its original Chinese form within quotes`;
+    }
+
     const systemPrompt = `You are a professional video prompt engineer specializing in AI video generation (Kling, Sora, Runway, etc.).
 
-Your task: transform a structured scene description into a vivid, cinematic video generation prompt.
+Your task: transform a structured scene description into a vivid, cinematic video generation prompt, and provide both English and Chinese versions.
 
 Rules:
-1. Output in English only
-2. Use professional cinematic terminology: shot types (close-up, wide shot, tracking shot), camera movements (dolly in, crane up, pan left), lighting terms (rim light, chiaroscuro, golden hour glow)
-3. Add rich visual details: textures, colors, atmosphere, depth of field, motion blur
-4. Keep the core scene content (characters, actions, dialogues, mood) intact
-5. Write as a single flowing paragraph, no bullet points or labels
-6. Keep it under 200 words
-7. Be creative — each time you write, vary the descriptive details and word choices while preserving the scene's meaning
-8. Do NOT include any explanation or preamble, output the prompt only`;
+1. Use professional cinematic terminology: shot types (close-up, wide shot, tracking shot), camera movements (dolly in, crane up, pan left), lighting terms (rim light, chiaroscuro, golden hour glow)
+2. Add rich visual details: textures, colors, atmosphere, depth of field, motion blur
+3. Keep the core scene content (characters, actions, dialogues, mood) intact
+4. Write as a single flowing paragraph, no bullet points or labels
+5. Keep each version under 300 words
+6. Be creative — each time you write, vary the descriptive details and word choices while preserving the scene's meaning
+7. The Chinese version should be a natural Chinese expression of the same content, NOT a literal translation
+8. Output ONLY a valid, complete JSON object with "en" and "zh" keys, no other text or markdown formatting. Ensure the JSON is properly closed and not truncated
+${voiceRules}
 
-    const userPrompt = `Transform this scene description into a cinematic video generation prompt:\n\n${basePrompt}`;
+Example output format:
+{"en": "A cinematic wide shot...", "zh": "一个电影感的广角镜头..."}`;
 
-    const optimized = await client.generateText(userPrompt, systemPrompt, {
+    const userPrompt = `Transform this scene description into a cinematic video generation prompt (both English and Chinese):\n\n${basePrompt}`;
+
+    const rawResult = await client.generateText(userPrompt, systemPrompt, {
       temperature: 0.8,
-      maxTokens: 400,
+      maxTokens: 2048,
     });
 
-    const result = optimized.trim();
-    if (!result) {
+    const trimmed = rawResult.trim();
+
+    // 尝试解析 JSON
+    let result: BilingualPrompt;
+    try {
+      // 处理可能被 markdown 代码块包裹的情况
+      const jsonStr = trimmed
+        .replace(/^```(?:json)?\s*/, "")
+        .replace(/\s*```$/, "");
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.en && typeof parsed.en === "string") {
+        result = {
+          en: parsed.en.trim(),
+          zh: (parsed.zh || "").trim(),
+        };
+      } else {
+        console.warn("AI 返回 JSON 缺少 en 字段，降级处理");
+        result = { en: trimmed, zh: "" };
+      }
+    } catch {
+      console.warn("AI 返回非 JSON 格式，降级处理");
+      result = { en: trimmed, zh: "" };
+    }
+
+    if (!result.en) {
       console.warn("AI 返回空结果，降级使用基础 prompt");
-      return basePrompt;
+      return fallback;
     }
 
     // 记录成功日志
@@ -205,8 +274,8 @@ Rules:
       modelType: "TEXT",
       modelConfigId: config.id,
       inputTokens: estimateTokenCount(systemPrompt + userPrompt),
-      outputTokens: estimateTokenCount(result),
-      cost: 0.01, // TEXT 类型成本
+      outputTokens: estimateTokenCount(trimmed),
+      cost: 0.01,
       latencyMs: Date.now() - startTime,
       status: "SUCCESS",
       taskId: `video-prompt-optimize-${Date.now()}`,
@@ -243,7 +312,7 @@ Rules:
       });
     }
 
-    return basePrompt;
+    return fallback;
   }
 }
 
@@ -259,16 +328,18 @@ function estimateTokenCount(text: string): number {
 /**
  * 构建视频生成 prompt
  * 根据指定的类型构建 prompt
+ * smart_combine 返回英文字符串，ai_optimized 返回中英双语
  */
 export async function buildVideoPrompt(
   options: PromptBuildOptions
-): Promise<string> {
-  const { type, scene, characters, userId, tenantId } = options;
+): Promise<BilingualPrompt> {
+  const { type, scene, characters, userId, tenantId, withVoice, voiceLanguage } = options;
 
   if (type === "smart_combine") {
-    return buildSmartCombinePrompt(scene, characters);
+    const en = buildSmartCombinePrompt(scene, characters, withVoice, voiceLanguage);
+    return { en, zh: "" };
   } else if (type === "ai_optimized") {
-    return await buildAIOptimizedPrompt(scene, characters, userId, tenantId);
+    return await buildAIOptimizedPrompt(scene, characters, userId, tenantId, withVoice, voiceLanguage);
   }
 
   throw new Error(`Unknown prompt type: ${type}`);

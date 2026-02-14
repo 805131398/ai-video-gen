@@ -5,6 +5,7 @@ import { buildVideoPrompt } from "@/lib/services/video-prompt-builder";
 import { createVideoClient } from "@/lib/ai/video-client";
 import { getEffectiveAIConfig } from "@/lib/services/ai-config-service";
 import { pollVideoStatus } from "@/lib/services/video-polling-service";
+import { logAIUsage } from "@/lib/services/ai-usage-service";
 
 interface GenerateSceneVideoRequest {
   promptType?: "smart_combine" | "ai_optimized";
@@ -15,6 +16,8 @@ interface GenerateSceneVideoRequest {
   useStoryboard?: boolean; // 是否使用故事板格式
   useCharacterImage?: boolean; // 是否使用角色形象作为参考图（仅当 useStoryboard=true 时有效）
   customPrompt?: string; // 用户编辑后的提示词（如果传了则直接使用）
+  withVoice?: boolean; // 是否包含台词/声音
+  voiceLanguage?: "zh" | "en"; // 台词语言
 }
 
 /**
@@ -41,6 +44,8 @@ export async function POST(
     const promptType = body.promptType || "smart_combine";
     const useStoryboard = body.useStoryboard || false;
     const useCharacterImage = body.useCharacterImage !== false; // 默认 true
+    const withVoice = body.withVoice !== false; // 默认 true
+    const voiceLanguage = body.voiceLanguage || "zh"; // 默认中文
 
     // 2. 验证场景是否存在
     const scene = await prisma.scriptScene.findFirst({
@@ -116,13 +121,16 @@ export async function POST(
       }
     } else {
       // 使用普通格式
-      prompt = await buildVideoPrompt({
+      const builtPrompt = await buildVideoPrompt({
         type: promptType,
         scene,
         characters: scene.script.project.characters,
         userId: user.id,
         tenantId: user.tenantId,
+        withVoice,
+        voiceLanguage,
       });
+      prompt = builtPrompt.en;
 
       // 单独生成模式也支持角色形象
       if (useCharacterImage && !finalReferenceImage) {
@@ -182,17 +190,46 @@ export async function POST(
       });
 
       // 提交视频生成任务
-      const result = await videoClient.submit({
+      const submitStartTime = Date.now();
+      const submitParams = {
         prompt,
-        imageUrl: finalReferenceImage, // 参考图（可选）
-        duration: finalDuration, // 使用智能计算的时长
-        aspectRatio: body.aspectRatio || "16:9", // 宽高比
-      });
+        imageUrl: finalReferenceImage,
+        duration: finalDuration,
+        aspectRatio: body.aspectRatio || "16:9",
+      };
+      const result = await videoClient.submit(submitParams);
+      const submitLatency = Date.now() - submitStartTime;
 
       // 更新任务 ID
       await prisma.sceneVideo.update({
         where: { id: sceneVideo.id },
         data: { taskId: result.taskId },
+      });
+
+      // 记录提交请求日志
+      await logAIUsage({
+        tenantId: user.tenantId || null,
+        userId: user.id,
+        projectId,
+        modelType: "VIDEO",
+        modelConfigId: videoConfig.id,
+        inputTokens: prompt.length,
+        outputTokens: 0,
+        cost: 0,
+        latencyMs: submitLatency,
+        status: "SUCCESS",
+        taskId: result.taskId,
+        requestUrl: videoConfig.apiUrl,
+        requestBody: {
+          type: "submit",
+          ...submitParams,
+          sceneId: scene.id,
+          videoId: sceneVideo.id,
+        },
+        responseBody: {
+          type: "submit",
+          taskId: result.taskId,
+        },
       });
 
       // 8. 启动后台轮询任务
@@ -214,12 +251,38 @@ export async function POST(
         referenceImage: finalReferenceImage,
       });
     } catch (error) {
+      const submitErrorMsg = error instanceof Error ? error.message : "未知错误";
+
       // 生成失败，更新状态
       await prisma.sceneVideo.update({
         where: { id: sceneVideo.id },
         data: {
           status: "failed",
-          errorMessage: error instanceof Error ? error.message : "未知错误",
+          errorMessage: submitErrorMsg,
+        },
+      });
+
+      // 记录提交失败日志
+      await logAIUsage({
+        tenantId: user.tenantId || null,
+        userId: user.id,
+        projectId,
+        modelType: "VIDEO",
+        modelConfigId: videoConfig.id,
+        inputTokens: prompt.length,
+        outputTokens: 0,
+        cost: 0,
+        latencyMs: 0,
+        status: "FAILED",
+        errorMessage: submitErrorMsg,
+        requestUrl: videoConfig.apiUrl,
+        requestBody: {
+          type: "submit",
+          prompt,
+          duration: finalDuration,
+          aspectRatio: body.aspectRatio || "16:9",
+          sceneId: scene.id,
+          videoId: sceneVideo.id,
         },
       });
 

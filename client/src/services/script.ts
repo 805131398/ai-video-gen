@@ -170,6 +170,8 @@ export const generateSceneVideo = async (
     duration?: number;
     hd?: boolean;
     customPrompt?: string;
+    withVoice?: boolean;
+    voiceLanguage?: 'zh' | 'en';
   }
 ): Promise<{ taskId: string; message: string; sceneCount: number }> => {
   const response = await api.post(
@@ -258,5 +260,18 @@ export const previewPrompt = async (
     options
   );
   return response.data;
+};
+
+// 翻译提示词（中英互译）
+export const translatePrompt = async (
+  projectId: string,
+  text: string,
+  direction: 'en-zh' | 'zh-en'
+): Promise<string> => {
+  const response = await api.post(
+    `/projects/${projectId}/steps/images/translate`,
+    { text, direction }
+  );
+  return response.data.translation;
 };
 

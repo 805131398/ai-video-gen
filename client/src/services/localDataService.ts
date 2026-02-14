@@ -7,6 +7,7 @@ import {
   SceneVideo,
   DownloadResourceParams,
   GenerationSnapshot,
+  ScenePromptCache,
 } from '../types';
 
 /**
@@ -339,6 +340,32 @@ export async function getGenerationSnapshots(sceneId: string): Promise<Generatio
   } catch (error) {
     console.error('Error getting generation snapshots:', error);
     return [];
+  }
+}
+
+// ==================== 场景提示词缓存管理 ====================
+
+/**
+ * 保存场景提示词缓存到本地
+ */
+export async function saveScenePromptCache(cache: ScenePromptCache): Promise<boolean> {
+  try {
+    return await window.electron.db.saveScenePromptCache(cache);
+  } catch (error) {
+    console.error('Error saving scene prompt cache:', error);
+    return false;
+  }
+}
+
+/**
+ * 获取场景的提示词缓存
+ */
+export async function getScenePromptCache(sceneId: string): Promise<ScenePromptCache | null> {
+  try {
+    return await window.electron.db.getScenePromptCache(sceneId);
+  } catch (error) {
+    console.error('Error getting scene prompt cache:', error);
+    return null;
   }
 }
 

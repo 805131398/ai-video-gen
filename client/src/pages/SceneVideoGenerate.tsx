@@ -13,15 +13,19 @@ import {
   Edit3,
   MessageSquare,
   Info,
+  Languages,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import {
   getScript,
   getScriptScenes,
   generateSceneVideo,
   previewPrompt,
+  translatePrompt,
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
-import { saveGenerationSnapshot } from '../services/localDataService';
+import { saveGenerationSnapshot, saveScenePromptCache, getScenePromptCache } from '../services/localDataService';
 import {
   ProjectScript,
   ScriptScene,
@@ -57,10 +61,14 @@ export default function SceneVideoGenerate() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 提示词状态
-  const [prompt, setPrompt] = useState('');
-  const [originalPrompt, setOriginalPrompt] = useState('');
+  // 提示词状态（双语）
+  const [promptEn, setPromptEn] = useState('');
+  const [promptZh, setPromptZh] = useState('');
+  const [originalPromptEn, setOriginalPromptEn] = useState('');
   const [promptLoading, setPromptLoading] = useState(false);
+  const [promptLang, setPromptLang] = useState<'zh' | 'en'>('zh');
+  const [zhEdited, setZhEdited] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [characterInfo, setCharacterInfo] = useState<
     PreviewPromptResponse['characterInfo']
   >({});
@@ -75,7 +83,11 @@ export default function SceneVideoGenerate() {
   >('ai_optimized');
   const [useStoryboard, setUseStoryboard] = useState(false);
   const [useCharacterImage, setUseCharacterImage] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
+
+  // 声音选项
+  const [withVoice, setWithVoice] = useState(true);
+  const [voiceLanguage, setVoiceLanguage] = useState<'zh' | 'en'>('zh');
 
   // 生成状态
   const [generating, setGenerating] = useState(false);
@@ -105,36 +117,99 @@ export default function SceneVideoGenerate() {
     }
   }, [id, scriptId, sceneId]);
 
-  // 加载提示词
-  const loadPrompt = useCallback(async () => {
+  // 加载提示词（支持指定类型，默认使用当前 promptType）
+  const loadPrompt = useCallback(async (overrideType?: 'smart_combine' | 'ai_optimized') => {
     if (!id || !scriptId || !sceneId) return;
     try {
       setPromptLoading(true);
       const result = await previewPrompt(id, scriptId, sceneId, {
-        promptType,
+        promptType: overrideType || promptType,
         useStoryboard,
         useCharacterImage,
+        withVoice,
+        voiceLanguage,
       });
-      setPrompt(result.prompt);
-      setOriginalPrompt(result.prompt);
+      const { en, zh } = result.prompt;
+      setPromptEn(en);
+      setPromptZh(zh);
+      setOriginalPromptEn(en);
+      setZhEdited(false);
       setCharacterInfo(result.characterInfo || {});
+
+      // 保存到本地缓存
+      await saveScenePromptCache({
+        sceneId,
+        projectId: id,
+        scriptId,
+        promptEn: en,
+        promptZh: zh,
+        promptType: overrideType || promptType,
+        useStoryboard,
+        useCharacterImage,
+        aspectRatio,
+        characterId: result.characterInfo?.characterId,
+        characterName: result.characterInfo?.characterName,
+        digitalHumanId: result.characterInfo?.digitalHumanId,
+        referenceImage: result.characterInfo?.referenceImage,
+        imageSource: result.characterInfo?.imageSource,
+        withVoice,
+        voiceLanguage,
+      });
     } catch (err: any) {
       console.error('Preview prompt error:', err);
-      setPrompt('提示词生成失败，请重试');
+      setPromptEn('提示词生成失败，请重试');
+      setPromptZh('');
     } finally {
       setPromptLoading(false);
     }
-  }, [id, scriptId, sceneId, promptType, useStoryboard, useCharacterImage]);
+  }, [id, scriptId, sceneId, promptType, useStoryboard, useCharacterImage, aspectRatio, withVoice, voiceLanguage]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // 初始加载：先尝试从本地缓存读取，没有缓存则用 smart_combine 快速生成
   useEffect(() => {
-    if (!loading && scene) {
-      loadPrompt();
+    if (!loading && scene && !promptEn && sceneId) {
+      const loadFromCacheOrGenerate = async () => {
+        try {
+          const cached = await getScenePromptCache(sceneId);
+          if (cached && cached.promptEn) {
+            // 从缓存恢复
+            setPromptEn(cached.promptEn);
+            setPromptZh(cached.promptZh || '');
+            setOriginalPromptEn(cached.promptEn);
+            setZhEdited(false);
+            if (cached.promptType) {
+              setPromptType(cached.promptType as 'smart_combine' | 'ai_optimized');
+            }
+            if (cached.aspectRatio) {
+              setAspectRatio(cached.aspectRatio);
+            }
+            setUseStoryboard(cached.useStoryboard);
+            setUseCharacterImage(cached.useCharacterImage);
+            setWithVoice(cached.withVoice !== false);
+            setVoiceLanguage(cached.voiceLanguage || 'zh');
+            setCharacterInfo({
+              characterId: cached.characterId,
+              characterName: cached.characterName,
+              digitalHumanId: cached.digitalHumanId,
+              referenceImage: cached.referenceImage,
+              imageSource: cached.imageSource,
+            });
+          } else {
+            // 没有缓存，用 smart_combine 快速生成
+            loadPrompt('smart_combine');
+          }
+        } catch {
+          // 缓存读取失败，降级生成
+          loadPrompt('smart_combine');
+        }
+      };
+      loadFromCacheOrGenerate();
     }
-  }, [loading, scene, loadPrompt]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, scene]);
 
   // 解析角色图片本地路径
   useEffect(() => {
@@ -158,6 +233,42 @@ export default function SceneVideoGenerate() {
     resolve();
   }, [characterInfo.digitalHumanId, characterInfo.referenceImage]);
 
+  // 同步中文到英文
+  const handleTranslateToEn = async () => {
+    if (!id || !scriptId || !sceneId || !promptZh) return;
+    try {
+      setTranslating(true);
+      const translated = await translatePrompt(id, promptZh, 'zh-en');
+      setPromptEn(translated);
+      setZhEdited(false);
+
+      // 更新本地缓存
+      await saveScenePromptCache({
+        sceneId,
+        projectId: id,
+        scriptId,
+        promptEn: translated,
+        promptZh,
+        promptType,
+        useStoryboard,
+        useCharacterImage,
+        aspectRatio,
+        characterId: characterInfo.characterId,
+        characterName: characterInfo.characterName,
+        digitalHumanId: characterInfo.digitalHumanId,
+        referenceImage: characterInfo.referenceImage,
+        imageSource: characterInfo.imageSource,
+        withVoice,
+        voiceLanguage,
+      });
+    } catch (err: any) {
+      console.error('Translate error:', err);
+      setError('翻译失败，请重试');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   // 开始生成视频
   const handleGenerate = async () => {
     if (!id || !scriptId || !sceneId || !scene) return;
@@ -170,8 +281,8 @@ export default function SceneVideoGenerate() {
         projectId: id,
         scriptId,
         sceneId,
-        originalPrompt,
-        finalPrompt: prompt,
+        originalPrompt: originalPromptEn,
+        finalPrompt: promptEn,
         promptType,
         useStoryboard,
         useCharacterImage,
@@ -185,13 +296,13 @@ export default function SceneVideoGenerate() {
       };
       await saveGenerationSnapshot(snapshot);
 
-      // 调用生成 API
+      // 调用生成 API（始终使用英文 prompt）
       await generateSceneVideo(id, scriptId, sceneId, {
         promptType,
         useStoryboard,
         useCharacterImage,
         aspectRatio,
-        customPrompt: prompt,
+        customPrompt: promptEn,
       });
 
       // 跳转回视频列表页
@@ -479,13 +590,38 @@ export default function SceneVideoGenerate() {
             {/* 提示词区域 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  视频提示词
-                  <InfoTip text="发给 AI 的指令，告诉它生成什么样的视频。你可以手动修改" />
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    视频提示词
+                    <InfoTip text="发给 AI 的指令，告诉它生成什么样的视频。你可以手动修改" />
+                  </h3>
+                  {/* 中/英切换 */}
+                  <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setPromptLang('zh')}
+                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                        promptLang === 'zh'
+                          ? 'bg-white text-slate-900 shadow-sm font-medium'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      中文
+                    </button>
+                    <button
+                      onClick={() => setPromptLang('en')}
+                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                        promptLang === 'en'
+                          ? 'bg-white text-slate-900 shadow-sm font-medium'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
                 <button
-                  onClick={loadPrompt}
+                  onClick={() => loadPrompt()}
                   disabled={promptLoading}
                   className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
                 >
@@ -495,6 +631,39 @@ export default function SceneVideoGenerate() {
                   重新生成
                 </button>
               </div>
+              {/* 声音控制栏 */}
+              <div className="flex items-center gap-4 mb-3 px-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setWithVoice(!withVoice)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+                      withVoice
+                        ? 'border-purple-200 bg-purple-50 text-purple-700'
+                        : 'border-slate-200 bg-slate-50 text-slate-400'
+                    }`}
+                  >
+                    {withVoice ? (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5" />
+                    )}
+                    {withVoice ? '有声音' : '无声音'}
+                  </button>
+                </div>
+                {withVoice && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-400">语音:</span>
+                    <select
+                      value={voiceLanguage}
+                      onChange={(e) => setVoiceLanguage(e.target.value as 'zh' | 'en')}
+                      className="text-xs border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="zh">中文</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                )}
+              </div>
               {promptLoading ? (
                 <div className="space-y-2">
                   <div className="h-4 bg-slate-100 rounded animate-pulse" />
@@ -502,13 +671,48 @@ export default function SceneVideoGenerate() {
                   <div className="h-4 bg-slate-100 rounded animate-pulse w-1/2" />
                 </div>
               ) : (
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={8}
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="提示词将自动生成..."
-                />
+                <>
+                  {promptLang === 'zh' ? (
+                    <textarea
+                      value={promptZh}
+                      onChange={(e) => {
+                        setPromptZh(e.target.value);
+                        setZhEdited(true);
+                      }}
+                      rows={8}
+                      className="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder={promptZh ? undefined : '中文提示词暂无，切换到英文查看'}
+                    />
+                  ) : (
+                    <textarea
+                      value={promptEn}
+                      onChange={(e) => setPromptEn(e.target.value)}
+                      rows={8}
+                      className="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="提示词将自动生成..."
+                    />
+                  )}
+                  {/* 中文编辑后的同步提示 */}
+                  {zhEdited && (
+                    <div className="flex items-center justify-between mt-2 px-1">
+                      <span className="text-xs text-amber-600">
+                        中文已修改，英文版本尚未同步
+                      </span>
+                      <button
+                        onClick={handleTranslateToEn}
+                        disabled={translating}
+                        className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                      >
+                        {translating ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Languages className="w-3 h-3" />
+                        )}
+                        {translating ? '翻译中...' : '同步到英文'}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -653,7 +857,7 @@ export default function SceneVideoGenerate() {
             {/* 生成按钮 */}
             <button
               onClick={handleGenerate}
-              disabled={generating || promptLoading || !prompt}
+              disabled={generating || promptLoading || !promptEn}
               className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-sm"
             >
               {generating ? (

@@ -11,6 +11,8 @@ interface GenerateVideosRequest {
   sceneIds?: string[]; // 可选：指定要生成视频的场景 ID，不传则为所有场景生成
   aspectRatio?: string; // 宽高比，如 "16:9", "9:16", "1:1"
   mode?: "individual" | "storyboard"; // 生成模式：individual-单独生成，storyboard-故事板模式
+  withVoice?: boolean; // 是否包含台词/声音
+  voiceLanguage?: "zh" | "en"; // 台词语言
 }
 
 /**
@@ -36,6 +38,8 @@ export async function POST(
     const sceneIds = body.sceneIds; // 可选的场景 ID 列表
     const aspectRatio = body.aspectRatio || "16:9"; // 默认 16:9
     const mode = body.mode || "individual"; // 默认单独生成模式
+    const withVoice = body.withVoice !== false; // 默认 true
+    const voiceLanguage = body.voiceLanguage || "zh"; // 默认中文
 
     // 2. 获取视频生成配置（bltcy）
     const videoConfig = await getEffectiveAIConfig("VIDEO", user.id, user.tenantId);
@@ -109,20 +113,25 @@ export async function POST(
         promptType,
         scriptId,
         user.id,
-        user.tenantId
+        user.tenantId,
+        withVoice,
+        voiceLanguage
       );
     } else {
       // 单独生成模式：为每个场景单独生成视频
       const videoTasks = [];
       for (const scene of targetScenes) {
         // 构建 prompt
-        const prompt = await buildVideoPrompt({
+        const builtPrompt = await buildVideoPrompt({
           type: promptType,
           scene,
           characters: script.project.characters,
           userId: user.id,
           tenantId: user.tenantId,
+          withVoice,
+          voiceLanguage,
         });
+        const prompt = builtPrompt.en;
 
         // 创建视频记录（状态为 pending）
         const sceneVideo = await prisma.sceneVideo.create({
@@ -188,22 +197,26 @@ async function generateStoryboardVideo(
   promptType: "smart_combine" | "ai_optimized",
   scriptId: string,
   userId?: string,
-  tenantId?: string
+  tenantId?: string,
+  withVoice?: boolean,
+  voiceLanguage?: "zh" | "en"
 ) {
   // 1. 为每个场景构建 prompt
   const scenePrompts = [];
   for (const scene of scenes) {
-    const prompt = await buildVideoPrompt({
+    const builtPrompt = await buildVideoPrompt({
       type: promptType,
       scene,
       characters,
       userId,
       tenantId,
+      withVoice,
+      voiceLanguage,
     });
     scenePrompts.push({
       title: scene.title,
       duration: scene.duration,
-      prompt,
+      prompt: builtPrompt.en,
     });
   }
 
