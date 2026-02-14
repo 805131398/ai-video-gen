@@ -716,7 +716,9 @@ model AIUsageLog {
   requestBody   Json?       @map("request_body")
   responseBody  Json?       @map("response_body")
   taskId        String?     @map("task_id")
+  requestCount  Int         @default(1) @map("request_count")
   createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime?   @updatedAt @map("updated_at")
 
   tenant      Tenant?       @relation(fields: [tenantId], references: [id])
   user        User          @relation(fields: [userId], references: [id])

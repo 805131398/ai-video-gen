@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
           errorMessage: true,
           requestUrl: true,
           taskId: true,
+          requestCount: true,
           createdAt: true,
           user: { select: { name: true, email: true } },
           project: { select: { id: true, title: true } },

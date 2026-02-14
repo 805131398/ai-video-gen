@@ -65,6 +65,7 @@ interface LogItem {
   errorMessage: string | null;
   requestUrl: string | null;
   taskId: string | null;
+  requestCount: number;
   createdAt: string;
   user: { name: string | null; email: string };
   project: { id: string; title: string } | null;
@@ -506,6 +507,7 @@ export default function AILogsPage() {
                   <TableHead className="w-[120px]">项目</TableHead>
                   <TableHead className="min-w-[200px]">请求 URL</TableHead>
                   <TableHead className="w-[140px]">任务 ID</TableHead>
+                  <TableHead className="w-[60px] text-right">请求次数</TableHead>
                   <TableHead className="w-[80px] text-right">延迟</TableHead>
                   <TableHead className="w-[80px] text-right">费用</TableHead>
                   <TableHead className="w-[100px]">状态</TableHead>
@@ -515,13 +517,13 @@ export default function AILogsPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-slate-500">
                       加载中...
                     </TableCell>
                   </TableRow>
                 ) : logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-slate-500">
                       暂无数据
                     </TableCell>
                   </TableRow>
@@ -567,6 +569,15 @@ export default function AILogsPage() {
                           </button>
                         ) : (
                           <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-xs">
+                        {log.requestCount > 1 ? (
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            {log.requestCount}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400">1</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-xs">
@@ -695,6 +706,11 @@ export default function AILogsPage() {
                       selectedLog.cost ? `¥${selectedLog.cost.toFixed(4)}` : "-"
                     }
                     icon="💰"
+                  />
+                  <MetricItem
+                    label="请求次数"
+                    value={String(selectedLog.requestCount || 1)}
+                    icon="🔄"
                   />
                 </div>
               </div>

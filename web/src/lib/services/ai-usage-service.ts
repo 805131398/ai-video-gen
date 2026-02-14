@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { AIModelType, AILogStatus } from "@prisma/client";
+import { AIModelType, AILogStatus } from "@/generated/prisma/enums";
 
 interface LogAIUsageParams {
   tenantId: string | null;
@@ -47,6 +47,42 @@ export async function logAIUsage(params: LogAIUsageParams) {
   } catch (error) {
     console.error("Failed to log AI usage:", error);
     // Don't throw - logging failure shouldn't break the main flow
+    return null;
+  }
+}
+
+/**
+ * 记录或更新 AI 调用日志（相同 taskId 只记录一次，后续累加 requestCount）
+ * 适用于轮询类接口，避免产生大量重复日志
+ */
+export async function logOrUpdateAIUsage(params: LogAIUsageParams) {
+  try {
+    if (!params.taskId) {
+      return logAIUsage(params);
+    }
+
+    // 查找相同 taskId 的已有记录
+    const existing = await prisma.aIUsageLog.findFirst({
+      where: { taskId: params.taskId },
+    });
+
+    if (existing) {
+      // 已有记录，只增加请求次数并更新响应体
+      const updated = await prisma.aIUsageLog.update({
+        where: { id: existing.id },
+        data: {
+          requestCount: { increment: 1 },
+          responseBody: params.responseBody ?? existing.responseBody,
+          latencyMs: params.latencyMs,
+        },
+      });
+      return updated;
+    }
+
+    // 没有已有记录，创建新记录
+    return logAIUsage(params);
+  } catch (error) {
+    console.error("Failed to log/update AI usage:", error);
     return null;
   }
 }
