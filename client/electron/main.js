@@ -201,6 +201,13 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle('db:getGenerationSnapshots', async (_, sceneId) => {
         return (0, database_1.getGenerationSnapshots)(sceneId);
     });
+    // 场景提示词缓存管理
+    electron_1.ipcMain.handle('db:saveScenePromptCache', async (_, cache) => {
+        return (0, database_1.saveScenePromptCache)(cache);
+    });
+    electron_1.ipcMain.handle('db:getScenePromptCache', async (_, sceneId) => {
+        return (0, database_1.getScenePromptCache)(sceneId);
+    });
     // 资源下载管理
     electron_1.ipcMain.handle('resources:download', async (_, params) => {
         return await (0, resources_1.downloadResource)(params);

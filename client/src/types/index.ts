@@ -101,6 +101,19 @@ export interface GenerateCharactersResponse {
   }>;
 }
 
+// 供应商上传记录
+export interface ProviderUploadRecord {
+  id?: number;
+  localResourceHash: string;
+  localPath?: string;
+  providerName: string;
+  remoteUrl: string;
+  fileSize?: number;
+  mimeType?: string;
+  expiresAt?: string;
+  createdAt?: string;
+}
+
 // Electron API 类型
 export interface ElectronAPI {
   db: {
@@ -136,6 +149,13 @@ export interface ElectronAPI {
     // 生成快照管理
     saveGenerationSnapshot: (snapshot: GenerationSnapshot) => Promise<boolean>;
     getGenerationSnapshots: (sceneId: string) => Promise<GenerationSnapshot[]>;
+    // 场景提示词缓存管理
+    saveScenePromptCache: (cache: ScenePromptCache) => Promise<boolean>;
+    getScenePromptCache: (sceneId: string) => Promise<ScenePromptCache | null>;
+    // 供应商上传记录管理
+    getProviderUploadRecord: (localResourceHash: string, providerName: string) => Promise<ProviderUploadRecord | null>;
+    saveProviderUploadRecord: (record: ProviderUploadRecord) => Promise<boolean>;
+    deleteProviderUploadRecord: (localResourceHash: string, providerName: string) => Promise<boolean>;
   };
   resources: {
     download: (params: DownloadResourceParams) => Promise<DownloadResult>;
@@ -308,12 +328,14 @@ export interface PreviewPromptRequest {
   promptType?: 'smart_combine' | 'ai_optimized';
   useStoryboard?: boolean;
   useCharacterImage?: boolean;
+  withVoice?: boolean;
+  voiceLanguage?: 'zh' | 'en';
 }
 
 // 提示词预览响应
 export interface PreviewPromptResponse {
   success: boolean;
-  prompt: string;
+  prompt: { en: string; zh: string };
   characterInfo: {
     characterId?: string;
     characterName?: string;
@@ -342,5 +364,26 @@ export interface GenerationSnapshot {
   referenceImage?: string;
   sceneContent: string; // JSON string
   createdAt: string;
+}
+
+// 场景提示词缓存（本地 SQLite）
+export interface ScenePromptCache {
+  sceneId: string;
+  projectId: string;
+  scriptId: string;
+  promptEn: string;
+  promptZh: string;
+  promptType: string;
+  useStoryboard: boolean;
+  useCharacterImage: boolean;
+  aspectRatio: string;
+  characterId?: string;
+  characterName?: string;
+  digitalHumanId?: string;
+  referenceImage?: string;
+  imageSource?: 'digital_human' | 'avatar';
+  withVoice: boolean;
+  voiceLanguage: 'zh' | 'en';
+  updatedAt?: string;
 }
 

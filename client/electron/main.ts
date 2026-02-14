@@ -38,10 +38,17 @@ import {
   // 生成快照管理
   saveGenerationSnapshot,
   getGenerationSnapshots,
+  // 场景提示词缓存管理
+  saveScenePromptCache,
+  getScenePromptCache,
   // 资源下载管理
   saveResourceDownload,
   getResourceDownload,
   updateResourceDownload,
+  // 供应商上传记录管理
+  getProviderUploadRecord,
+  saveProviderUploadRecord,
+  deleteProviderUploadRecord,
 } from './database';
 import { downloadResource, deleteProjectResources } from './resources';
 
@@ -239,6 +246,28 @@ function registerIpcHandlers() {
 
   ipcMain.handle('db:getGenerationSnapshots', async (_, sceneId: string) => {
     return getGenerationSnapshots(sceneId);
+  });
+
+  // 场景提示词缓存管理
+  ipcMain.handle('db:saveScenePromptCache', async (_, cache: any) => {
+    return saveScenePromptCache(cache);
+  });
+
+  ipcMain.handle('db:getScenePromptCache', async (_, sceneId: string) => {
+    return getScenePromptCache(sceneId);
+  });
+
+  // 供应商上传记录管理
+  ipcMain.handle('db:getProviderUploadRecord', async (_, localResourceHash: string, providerName: string) => {
+    return getProviderUploadRecord(localResourceHash, providerName);
+  });
+
+  ipcMain.handle('db:saveProviderUploadRecord', async (_, record: any) => {
+    return saveProviderUploadRecord(record);
+  });
+
+  ipcMain.handle('db:deleteProviderUploadRecord', async (_, localResourceHash: string, providerName: string) => {
+    return deleteProviderUploadRecord(localResourceHash, providerName);
   });
 
   // 资源下载管理

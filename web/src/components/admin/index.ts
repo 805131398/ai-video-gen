@@ -8,3 +8,5 @@ export { ReviewDialog } from "./ReviewDialog";
 export { AssignRolesDialog } from "./AssignRolesDialog";
 export { SearchFilters } from "./SearchFilters";
 export type { FilterConfig, FilterOption } from "./SearchFilters";
+export { LabelWithTooltip } from "./LabelWithTooltip";
+export { ChipSelector } from "./ChipSelector";

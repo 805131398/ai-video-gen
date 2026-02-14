@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/admin";
+import { PageHeader, LabelWithTooltip, ChipSelector } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Loader2, Type, ImageIcon, Video, Mic, HelpCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Type, ImageIcon, Video, Mic } from "lucide-react";
 import { toast } from "sonner";
 
 type AIModelType = "TEXT" | "IMAGE" | "VIDEO" | "VOICE";
@@ -127,69 +127,6 @@ const EMPTY_FORM: FormData = {
   isActive: true,
   priority: 0,
 };
-
-// 带提示的 Label 组件
-function LabelWithTooltip({
-  htmlFor,
-  children,
-  tooltip
-}: {
-  htmlFor?: string;
-  children: React.ReactNode;
-  tooltip: string;
-}) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <Label htmlFor={htmlFor}>{children}</Label>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[280px]">
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
-
-// Chip 选择器组件
-function ChipSelector<T extends string>({
-  value,
-  onChange,
-  options,
-  labels,
-  disabled,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: T[];
-  labels: Record<T, string>;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(option)}
-          className={cn(
-            "px-3 py-1.5 text-sm rounded-full border transition-all",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
-            value === option
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background hover:bg-accent hover:text-accent-foreground border-input hover:border-primary/50",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {labels[option]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 interface PageProps {
   params: Promise<{ id: string }>;

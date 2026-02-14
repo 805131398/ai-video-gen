@@ -36,6 +36,16 @@ contextBridge.exposeInMainWorld('electron', {
     // 生成快照管理
     saveGenerationSnapshot: (snapshot: any) => ipcRenderer.invoke('db:saveGenerationSnapshot', snapshot),
     getGenerationSnapshots: (sceneId: string) => ipcRenderer.invoke('db:getGenerationSnapshots', sceneId),
+    // 场景提示词缓存管理
+    saveScenePromptCache: (cache: any) => ipcRenderer.invoke('db:saveScenePromptCache', cache),
+    getScenePromptCache: (sceneId: string) => ipcRenderer.invoke('db:getScenePromptCache', sceneId),
+    // 供应商上传记录管理
+    getProviderUploadRecord: (localResourceHash: string, providerName: string) =>
+      ipcRenderer.invoke('db:getProviderUploadRecord', localResourceHash, providerName),
+    saveProviderUploadRecord: (record: any) =>
+      ipcRenderer.invoke('db:saveProviderUploadRecord', record),
+    deleteProviderUploadRecord: (localResourceHash: string, providerName: string) =>
+      ipcRenderer.invoke('db:deleteProviderUploadRecord', localResourceHash, providerName),
   },
   // 资源管理
   resources: {

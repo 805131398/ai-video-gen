@@ -37,6 +37,9 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         // 生成快照管理
         saveGenerationSnapshot: (snapshot) => electron_1.ipcRenderer.invoke('db:saveGenerationSnapshot', snapshot),
         getGenerationSnapshots: (sceneId) => electron_1.ipcRenderer.invoke('db:getGenerationSnapshots', sceneId),
+        // 场景提示词缓存管理
+        saveScenePromptCache: (cache) => electron_1.ipcRenderer.invoke('db:saveScenePromptCache', cache),
+        getScenePromptCache: (sceneId) => electron_1.ipcRenderer.invoke('db:getScenePromptCache', sceneId),
     },
     // 资源管理
     resources: {

@@ -215,6 +215,53 @@ function createTables() {
     )
   `);
 
+  // 场景提示词缓存表（每个场景一条记录，用于页面刷新后恢复）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS scene_prompt_cache (
+      scene_id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      script_id TEXT NOT NULL,
+      prompt_en TEXT,
+      prompt_zh TEXT,
+      prompt_type TEXT,
+      use_storyboard INTEGER DEFAULT 0,
+      use_character_image INTEGER DEFAULT 1,
+      aspect_ratio TEXT DEFAULT '16:9',
+      character_id TEXT,
+      character_name TEXT,
+      digital_human_id TEXT,
+      reference_image TEXT,
+      image_source TEXT,
+      with_voice INTEGER DEFAULT 1,
+      voice_language TEXT DEFAULT 'zh',
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // 供应商图片上传记录表（缓存本地资源与远程URL的映射）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS provider_upload_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      local_resource_hash TEXT NOT NULL,
+      local_path TEXT,
+      provider_name TEXT NOT NULL,
+      remote_url TEXT NOT NULL,
+      file_size INTEGER,
+      mime_type TEXT,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(local_resource_hash, provider_name)
+    )
+  `);
+
+  // 迁移：为旧表添加新列（如果不存在）
+  try {
+    db.exec(`ALTER TABLE scene_prompt_cache ADD COLUMN with_voice INTEGER DEFAULT 1`);
+  } catch { /* 列已存在，忽略 */ }
+  try {
+    db.exec(`ALTER TABLE scene_prompt_cache ADD COLUMN voice_language TEXT DEFAULT 'zh'`);
+  } catch { /* 列已存在，忽略 */ }
+
   console.log('Database tables created successfully');
 }
 
@@ -917,5 +964,150 @@ export function getGenerationSnapshots(sceneId: string) {
   } catch (error) {
     console.error('Error getting generation snapshots:', error);
     return [];
+  }
+}
+
+// ==================== 场景提示词缓存管理 ====================
+
+// 保存/更新场景提示词缓存（按 scene_id 唯一）
+export function saveScenePromptCache(cache: any) {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO scene_prompt_cache (
+        scene_id, project_id, script_id,
+        prompt_en, prompt_zh, prompt_type,
+        use_storyboard, use_character_image, aspect_ratio,
+        character_id, character_name, digital_human_id,
+        reference_image, image_source,
+        with_voice, voice_language, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      cache.sceneId,
+      cache.projectId,
+      cache.scriptId,
+      cache.promptEn || null,
+      cache.promptZh || null,
+      cache.promptType || null,
+      cache.useStoryboard ? 1 : 0,
+      cache.useCharacterImage !== false ? 1 : 0,
+      cache.aspectRatio || '16:9',
+      cache.characterId || null,
+      cache.characterName || null,
+      cache.digitalHumanId || null,
+      cache.referenceImage || null,
+      cache.imageSource || null,
+      cache.withVoice !== false ? 1 : 0,
+      cache.voiceLanguage || 'zh',
+      new Date().toISOString()
+    );
+    return true;
+  } catch (error) {
+    console.error('Error saving scene prompt cache:', error);
+    return false;
+  }
+}
+
+// 获取场景的提示词缓存
+export function getScenePromptCache(sceneId: string) {
+  if (!db) return null;
+  try {
+    const stmt = db.prepare('SELECT * FROM scene_prompt_cache WHERE scene_id = ?');
+    const row: any = stmt.get(sceneId);
+    if (!row) return null;
+
+    return {
+      sceneId: row.scene_id,
+      projectId: row.project_id,
+      scriptId: row.script_id,
+      promptEn: row.prompt_en,
+      promptZh: row.prompt_zh,
+      promptType: row.prompt_type,
+      useStoryboard: row.use_storyboard === 1,
+      useCharacterImage: row.use_character_image === 1,
+      aspectRatio: row.aspect_ratio,
+      characterId: row.character_id,
+      characterName: row.character_name,
+      digitalHumanId: row.digital_human_id,
+      referenceImage: row.reference_image,
+      imageSource: row.image_source,
+      withVoice: row.with_voice === 1,
+      voiceLanguage: row.voice_language || 'zh',
+      updatedAt: row.updated_at,
+    };
+  } catch (error) {
+    console.error('Error getting scene prompt cache:', error);
+    return null;
+  }
+}
+
+// ==================== 供应商上传记录管理 ====================
+
+// 查询上传记录（通过 hash + providerName）
+export function getProviderUploadRecord(localResourceHash: string, providerName: string) {
+  if (!db) return null;
+  try {
+    const stmt = db.prepare(
+      'SELECT * FROM provider_upload_records WHERE local_resource_hash = ? AND provider_name = ?'
+    );
+    const row: any = stmt.get(localResourceHash, providerName);
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      localResourceHash: row.local_resource_hash,
+      localPath: row.local_path,
+      providerName: row.provider_name,
+      remoteUrl: row.remote_url,
+      fileSize: row.file_size,
+      mimeType: row.mime_type,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    };
+  } catch (error) {
+    console.error('Error getting provider upload record:', error);
+    return null;
+  }
+}
+
+// 保存上传记录
+export function saveProviderUploadRecord(record: any) {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO provider_upload_records (
+        local_resource_hash, local_path, provider_name, remote_url,
+        file_size, mime_type, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      record.localResourceHash,
+      record.localPath || null,
+      record.providerName,
+      record.remoteUrl,
+      record.fileSize || null,
+      record.mimeType || null,
+      record.expiresAt || null
+    );
+    return true;
+  } catch (error) {
+    console.error('Error saving provider upload record:', error);
+    return false;
+  }
+}
+
+// 删除上传记录
+export function deleteProviderUploadRecord(localResourceHash: string, providerName: string) {
+  if (!db) return false;
+  try {
+    const stmt = db.prepare(
+      'DELETE FROM provider_upload_records WHERE local_resource_hash = ? AND provider_name = ?'
+    );
+    stmt.run(localResourceHash, providerName);
+    return true;
+  } catch (error) {
+    console.error('Error deleting provider upload record:', error);
+    return false;
   }
 }

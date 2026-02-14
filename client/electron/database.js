@@ -34,6 +34,8 @@ exports.getResourceDownload = getResourceDownload;
 exports.updateResourceDownload = updateResourceDownload;
 exports.saveGenerationSnapshot = saveGenerationSnapshot;
 exports.getGenerationSnapshots = getGenerationSnapshots;
+exports.saveScenePromptCache = saveScenePromptCache;
+exports.getScenePromptCache = getScenePromptCache;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
 const electron_1 = require("electron");
@@ -231,6 +233,37 @@ function createTables() {
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+    // 场景提示词缓存表（每个场景一条记录，用于页面刷新后恢复）
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS scene_prompt_cache (
+      scene_id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      script_id TEXT NOT NULL,
+      prompt_en TEXT,
+      prompt_zh TEXT,
+      prompt_type TEXT,
+      use_storyboard INTEGER DEFAULT 0,
+      use_character_image INTEGER DEFAULT 1,
+      aspect_ratio TEXT DEFAULT '16:9',
+      character_id TEXT,
+      character_name TEXT,
+      digital_human_id TEXT,
+      reference_image TEXT,
+      image_source TEXT,
+      with_voice INTEGER DEFAULT 1,
+      voice_language TEXT DEFAULT 'zh',
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+    // 迁移：为旧表添加新列（如果不存在）
+    try {
+        db.exec(`ALTER TABLE scene_prompt_cache ADD COLUMN with_voice INTEGER DEFAULT 1`);
+    }
+    catch { /* 列已存在，忽略 */ }
+    try {
+        db.exec(`ALTER TABLE scene_prompt_cache ADD COLUMN voice_language TEXT DEFAULT 'zh'`);
+    }
+    catch { /* 列已存在，忽略 */ }
     console.log('Database tables created successfully');
 }
 // 获取用户信息
@@ -848,5 +881,63 @@ function getGenerationSnapshots(sceneId) {
     catch (error) {
         console.error('Error getting generation snapshots:', error);
         return [];
+    }
+}
+// ==================== 场景提示词缓存管理 ====================
+// 保存/更新场景提示词缓存（按 scene_id 唯一）
+function saveScenePromptCache(cache) {
+    if (!db)
+        return false;
+    try {
+        const stmt = db.prepare(`
+      INSERT OR REPLACE INTO scene_prompt_cache (
+        scene_id, project_id, script_id,
+        prompt_en, prompt_zh, prompt_type,
+        use_storyboard, use_character_image, aspect_ratio,
+        character_id, character_name, digital_human_id,
+        reference_image, image_source,
+        with_voice, voice_language, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+        stmt.run(cache.sceneId, cache.projectId, cache.scriptId, cache.promptEn || null, cache.promptZh || null, cache.promptType || null, cache.useStoryboard ? 1 : 0, cache.useCharacterImage !== false ? 1 : 0, cache.aspectRatio || '16:9', cache.characterId || null, cache.characterName || null, cache.digitalHumanId || null, cache.referenceImage || null, cache.imageSource || null, cache.withVoice !== false ? 1 : 0, cache.voiceLanguage || 'zh', new Date().toISOString());
+        return true;
+    }
+    catch (error) {
+        console.error('Error saving scene prompt cache:', error);
+        return false;
+    }
+}
+// 获取场景的提示词缓存
+function getScenePromptCache(sceneId) {
+    if (!db)
+        return null;
+    try {
+        const stmt = db.prepare('SELECT * FROM scene_prompt_cache WHERE scene_id = ?');
+        const row = stmt.get(sceneId);
+        if (!row)
+            return null;
+        return {
+            sceneId: row.scene_id,
+            projectId: row.project_id,
+            scriptId: row.script_id,
+            promptEn: row.prompt_en,
+            promptZh: row.prompt_zh,
+            promptType: row.prompt_type,
+            useStoryboard: row.use_storyboard === 1,
+            useCharacterImage: row.use_character_image === 1,
+            aspectRatio: row.aspect_ratio,
+            characterId: row.character_id,
+            characterName: row.character_name,
+            digitalHumanId: row.digital_human_id,
+            referenceImage: row.reference_image,
+            imageSource: row.image_source,
+            withVoice: row.with_voice === 1,
+            voiceLanguage: row.voice_language || 'zh',
+            updatedAt: row.updated_at,
+        };
+    }
+    catch (error) {
+        console.error('Error getting scene prompt cache:', error);
+        return null;
     }
 }
