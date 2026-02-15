@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'elect
 import path from 'path';
 import fs from 'fs/promises';
 import fsSync from 'fs';
+import crypto from 'crypto';
 import {
   initDatabase,
   getUser,
@@ -437,6 +438,30 @@ function registerIpcHandlers() {
     } catch (error) {
       console.error('Clear cache error:', error);
       return { success: false, deletedCount: 0 };
+    }
+  });
+
+  // 文件读取 + 哈希计算（供应商上传用）
+  ipcMain.handle('resources:readFileInfo', async (_, filePath: string) => {
+    try {
+      const buffer = fsSync.readFileSync(filePath);
+      const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeMap: Record<string, string> = {
+        '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+      };
+      return {
+        success: true,
+        base64: buffer.toString('base64'),
+        hash,
+        size: buffer.length,
+        mimeType: mimeMap[ext] || 'application/octet-stream',
+        fileName: path.basename(filePath),
+      };
+    } catch (error: any) {
+      console.error('Error reading file info:', error);
+      return { success: false, error: error.message };
     }
   });
 

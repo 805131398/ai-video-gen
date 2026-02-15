@@ -36,6 +36,9 @@ exports.saveGenerationSnapshot = saveGenerationSnapshot;
 exports.getGenerationSnapshots = getGenerationSnapshots;
 exports.saveScenePromptCache = saveScenePromptCache;
 exports.getScenePromptCache = getScenePromptCache;
+exports.getProviderUploadRecord = getProviderUploadRecord;
+exports.saveProviderUploadRecord = saveProviderUploadRecord;
+exports.deleteProviderUploadRecord = deleteProviderUploadRecord;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
 const electron_1 = require("electron");
@@ -253,6 +256,21 @@ function createTables() {
       with_voice INTEGER DEFAULT 1,
       voice_language TEXT DEFAULT 'zh',
       updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+    // 供应商图片上传记录表（缓存本地资源与远程URL的映射）
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS provider_upload_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      local_resource_hash TEXT NOT NULL,
+      local_path TEXT,
+      provider_name TEXT NOT NULL,
+      remote_url TEXT NOT NULL,
+      file_size INTEGER,
+      mime_type TEXT,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(local_resource_hash, provider_name)
     )
   `);
     // 迁移：为旧表添加新列（如果不存在）
@@ -939,5 +957,65 @@ function getScenePromptCache(sceneId) {
     catch (error) {
         console.error('Error getting scene prompt cache:', error);
         return null;
+    }
+}
+// ==================== 供应商上传记录管理 ====================
+// 查询上传记录（通过 hash + providerName）
+function getProviderUploadRecord(localResourceHash, providerName) {
+    if (!db)
+        return null;
+    try {
+        const stmt = db.prepare('SELECT * FROM provider_upload_records WHERE local_resource_hash = ? AND provider_name = ?');
+        const row = stmt.get(localResourceHash, providerName);
+        if (!row)
+            return null;
+        return {
+            id: row.id,
+            localResourceHash: row.local_resource_hash,
+            localPath: row.local_path,
+            providerName: row.provider_name,
+            remoteUrl: row.remote_url,
+            fileSize: row.file_size,
+            mimeType: row.mime_type,
+            expiresAt: row.expires_at,
+            createdAt: row.created_at,
+        };
+    }
+    catch (error) {
+        console.error('Error getting provider upload record:', error);
+        return null;
+    }
+}
+// 保存上传记录
+function saveProviderUploadRecord(record) {
+    if (!db)
+        return false;
+    try {
+        const stmt = db.prepare(`
+      INSERT OR REPLACE INTO provider_upload_records (
+        local_resource_hash, local_path, provider_name, remote_url,
+        file_size, mime_type, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+        stmt.run(record.localResourceHash, record.localPath || null, record.providerName, record.remoteUrl, record.fileSize || null, record.mimeType || null, record.expiresAt || null);
+        return true;
+    }
+    catch (error) {
+        console.error('Error saving provider upload record:', error);
+        return false;
+    }
+}
+// 删除上传记录
+function deleteProviderUploadRecord(localResourceHash, providerName) {
+    if (!db)
+        return false;
+    try {
+        const stmt = db.prepare('DELETE FROM provider_upload_records WHERE local_resource_hash = ? AND provider_name = ?');
+        stmt.run(localResourceHash, providerName);
+        return true;
+    }
+    catch (error) {
+        console.error('Error deleting provider upload record:', error);
+        return false;
     }
 }

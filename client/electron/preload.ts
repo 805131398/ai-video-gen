@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('resources:retry', resourceType, resourceId),
     getRootPath: () => ipcRenderer.invoke('resources:getRootPath'),
     openFolder: () => ipcRenderer.invoke('resources:openFolder'),
+    readFileInfo: (filePath: string) => ipcRenderer.invoke('resources:readFileInfo', filePath),
   },
   // 设置操作
   settings: {

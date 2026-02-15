@@ -40,6 +40,7 @@ const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const promises_1 = __importDefault(require("fs/promises"));
 const fs_1 = __importDefault(require("fs"));
+const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("./database");
 const resources_1 = require("./resources");
 let mainWindow = null;
@@ -208,6 +209,16 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle('db:getScenePromptCache', async (_, sceneId) => {
         return (0, database_1.getScenePromptCache)(sceneId);
     });
+    // 供应商上传记录管理
+    electron_1.ipcMain.handle('db:getProviderUploadRecord', async (_, localResourceHash, providerName) => {
+        return (0, database_1.getProviderUploadRecord)(localResourceHash, providerName);
+    });
+    electron_1.ipcMain.handle('db:saveProviderUploadRecord', async (_, record) => {
+        return (0, database_1.saveProviderUploadRecord)(record);
+    });
+    electron_1.ipcMain.handle('db:deleteProviderUploadRecord', async (_, localResourceHash, providerName) => {
+        return (0, database_1.deleteProviderUploadRecord)(localResourceHash, providerName);
+    });
     // 资源下载管理
     electron_1.ipcMain.handle('resources:download', async (_, params) => {
         return await (0, resources_1.downloadResource)(params);
@@ -359,6 +370,30 @@ function registerIpcHandlers() {
         catch (error) {
             console.error('Clear cache error:', error);
             return { success: false, deletedCount: 0 };
+        }
+    });
+    // 文件读取 + 哈希计算（供应商上传用）
+    electron_1.ipcMain.handle('resources:readFileInfo', async (_, filePath) => {
+        try {
+            const buffer = fs_1.default.readFileSync(filePath);
+            const hash = crypto_1.default.createHash('sha256').update(buffer).digest('hex');
+            const ext = path_1.default.extname(filePath).toLowerCase();
+            const mimeMap = {
+                '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+            };
+            return {
+                success: true,
+                base64: buffer.toString('base64'),
+                hash,
+                size: buffer.length,
+                mimeType: mimeMap[ext] || 'application/octet-stream',
+                fileName: path_1.default.basename(filePath),
+            };
+        }
+        catch (error) {
+            console.error('Error reading file info:', error);
+            return { success: false, error: error.message };
         }
     });
     // 应用控制

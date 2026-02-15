@@ -26,6 +26,7 @@ import {
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
 import { saveGenerationSnapshot, saveScenePromptCache, getScenePromptCache } from '../services/localDataService';
+import { ensureReferenceImageAccessible } from '../services/providerUpload';
 import {
   ProjectScript,
   ScriptScene,
@@ -275,6 +276,27 @@ export default function SceneVideoGenerate() {
     try {
       setGenerating(true);
 
+      // 如果开启了角色形象作为参考图，检查图片 URL 可用性并按需上传
+      let validReferenceImage = characterInfo.referenceImage;
+      if (useCharacterImage && characterInfo.referenceImage) {
+        try {
+          // 解析本地文件路径（localImageUrl 可能是 local-resource:// 格式）
+          const localPath = localImageUrl?.startsWith('local-resource://')
+            ? decodeURIComponent(localImageUrl.slice('local-resource://'.length))
+            : undefined;
+
+          validReferenceImage = await ensureReferenceImageAccessible(
+            characterInfo.referenceImage,
+            localPath
+          );
+        } catch (err) {
+          console.error('参考图片上传失败:', err);
+          setError('参考图片上传失败，请检查供应商上传配置');
+          setGenerating(false);
+          return;
+        }
+      }
+
       // 保存快照到本地
       const snapshot: GenerationSnapshot = {
         id: crypto.randomUUID(),
@@ -290,7 +312,7 @@ export default function SceneVideoGenerate() {
         characterId: characterInfo.characterId,
         characterName: characterInfo.characterName,
         digitalHumanId: characterInfo.digitalHumanId,
-        referenceImage: characterInfo.referenceImage,
+        referenceImage: validReferenceImage || characterInfo.referenceImage,
         sceneContent: JSON.stringify(scene.content),
         createdAt: new Date().toISOString(),
       };
@@ -303,6 +325,7 @@ export default function SceneVideoGenerate() {
         useCharacterImage,
         aspectRatio,
         customPrompt: promptEn,
+        referenceImage: useCharacterImage ? validReferenceImage : undefined,
       });
 
       // 跳转回视频列表页
@@ -374,7 +397,7 @@ export default function SceneVideoGenerate() {
             onClick={() => navigate(`/projects/${id}/script/${scriptId}`)}
             className="hover:text-purple-600 cursor-pointer transition-colors"
           >
-            {script?.name || script?.title}
+            {script?.title}
           </button>
           <span>/</span>
           <button

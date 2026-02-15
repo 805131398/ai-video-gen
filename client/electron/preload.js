@@ -40,6 +40,10 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         // 场景提示词缓存管理
         saveScenePromptCache: (cache) => electron_1.ipcRenderer.invoke('db:saveScenePromptCache', cache),
         getScenePromptCache: (sceneId) => electron_1.ipcRenderer.invoke('db:getScenePromptCache', sceneId),
+        // 供应商上传记录管理
+        getProviderUploadRecord: (localResourceHash, providerName) => electron_1.ipcRenderer.invoke('db:getProviderUploadRecord', localResourceHash, providerName),
+        saveProviderUploadRecord: (record) => electron_1.ipcRenderer.invoke('db:saveProviderUploadRecord', record),
+        deleteProviderUploadRecord: (localResourceHash, providerName) => electron_1.ipcRenderer.invoke('db:deleteProviderUploadRecord', localResourceHash, providerName),
     },
     // 资源管理
     resources: {
@@ -48,6 +52,7 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         retry: (resourceType, resourceId) => electron_1.ipcRenderer.invoke('resources:retry', resourceType, resourceId),
         getRootPath: () => electron_1.ipcRenderer.invoke('resources:getRootPath'),
         openFolder: () => electron_1.ipcRenderer.invoke('resources:openFolder'),
+        readFileInfo: (filePath) => electron_1.ipcRenderer.invoke('resources:readFileInfo', filePath),
     },
     // 设置操作
     settings: {

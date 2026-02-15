@@ -101,6 +101,17 @@ export interface GenerateCharactersResponse {
   }>;
 }
 
+// 文件信息读取结果
+export interface FileInfoResult {
+  success: boolean;
+  base64?: string;
+  hash?: string;
+  size?: number;
+  mimeType?: string;
+  fileName?: string;
+  error?: string;
+}
+
 // 供应商上传记录
 export interface ProviderUploadRecord {
   id?: number;
@@ -161,6 +172,7 @@ export interface ElectronAPI {
     download: (params: DownloadResourceParams) => Promise<DownloadResult>;
     getStatus: (resourceType: string, resourceId: string) => Promise<ResourceDownloadStatus | null>;
     retry: (resourceType: string, resourceId: string) => Promise<DownloadResult>;
+    readFileInfo: (filePath: string) => Promise<FileInfoResult>;
   };
   settings: {
     get: (key: string) => Promise<string | null>;

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
 import { deriveKey, encrypt } from "@/lib/crypto";
 
 // GET /api/upload-configs/credential?providerName=toapis
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const user = await getAuthUser(request);
+    if (!user?.id) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const key = deriveKey(session.user.id);
+    const key = deriveKey(user.id);
     const { encrypted, iv, authTag } = encrypt(config.apiKey, key);
 
     return NextResponse.json({
