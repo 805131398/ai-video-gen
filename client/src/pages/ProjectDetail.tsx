@@ -126,7 +126,7 @@ export default function ProjectDetail() {
   if (!project) return <div className="p-8">项目不存在</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
       <div className="px-6 lg:px-8 xl:px-12 py-6 max-w-[1920px] mx-auto">
         {/* 返回按钮 */}
         <button
@@ -167,11 +167,10 @@ export default function ProjectDetail() {
                   <>
                     <button
                       onClick={handleToggleSelectMode}
-                      className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors cursor-pointer shadow-sm whitespace-nowrap ${
-                        isSelectMode
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors cursor-pointer shadow-sm whitespace-nowrap ${isSelectMode
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <FileText className="w-4 h-4" />
                       {isSelectMode ? '取消选择' : '选择角色'}
@@ -231,6 +230,6 @@ export default function ProjectDetail() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

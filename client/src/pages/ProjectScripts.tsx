@@ -104,7 +104,7 @@ export default function ProjectScripts() {
   if (!project) return <div className="p-8">项目不存在</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="px-6 lg:px-8 xl:px-12 py-6 max-w-[1920px] mx-auto">
         {/* 返回按钮 */}
         <button

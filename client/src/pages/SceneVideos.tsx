@@ -199,7 +199,7 @@ export default function SceneVideosPage() {
   if (!script || !scene) return <div className="p-8">数据不存在</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
       <div className="px-6 lg:px-8 xl:px-12 py-6 max-w-[1920px] mx-auto">
         {/* 第一行：返回按钮 + 面包屑导航 */}
         <div className="flex items-center gap-2 mb-2 text-sm text-slate-600">
@@ -423,6 +423,6 @@ export default function SceneVideosPage() {
         selectingVideoId={selectingVideoId}
         deletingVideoId={deletingVideoId}
       />
-    </div>
+    </>
   );
 }

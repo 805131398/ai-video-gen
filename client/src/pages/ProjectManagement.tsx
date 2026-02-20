@@ -114,14 +114,14 @@ export default function ProjectManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-gray-600">加载中...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-8">
+    <>
       <div className="max-w-7xl mx-auto">
         {/* 页面标题和操作栏 */}
         <div className="mb-8 flex items-center justify-between">
@@ -184,8 +184,8 @@ export default function ProjectManagement() {
                     <tr
                       key={project.id}
                       className="hover:bg-[#F8FAFC] transition-colors"
-                      // TODO: 点击跳转到作品列表页面
-                      // onClick={() => navigate(`/projects/${project.id}/works`)}
+                    // TODO: 点击跳转到作品列表页面
+                    // onClick={() => navigate(`/projects/${project.id}/works`)}
                     >
                       <td className="px-6 py-4">
                         <div className="text-sm font-semibold text-[#1E293B]" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -292,7 +292,7 @@ export default function ProjectManagement() {
           onSave={handleSaveEdit}
         />
       )}
-    </div>
+    </>
   );
 }
 

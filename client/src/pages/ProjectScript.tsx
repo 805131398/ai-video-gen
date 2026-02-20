@@ -168,7 +168,7 @@ export default function ProjectScriptPage() {
   if (!script) return <div className="p-8">剧本不存在</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
       <div className="px-6 lg:px-8 xl:px-12 py-6 max-w-[1920px] mx-auto">
         {/* 返回按钮 */}
         <button
@@ -213,31 +213,28 @@ export default function ProjectScriptPage() {
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab('scene')}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === 'scene'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'scene'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               场景视图
             </button>
             <button
               onClick={() => setActiveTab('character')}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === 'character'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'character'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               角色视图
             </button>
             <button
               onClick={() => setActiveTab('timeline')}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === 'timeline'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === 'timeline'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               时间轴视图
             </button>
@@ -277,6 +274,6 @@ export default function ProjectScriptPage() {
           />
         )}
       </div>
-    </div>
+    </>
   );
 }

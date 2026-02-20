@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Agentation } from 'agentation';
+import TitleBar from './components/TitleBar';
 import { useEffect, useState } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -57,37 +58,41 @@ function App() {
     );
   }
 
+
   return (
-    <>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/"
-            element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}
-          >
-            <Route index element={<Navigate to="/projects" />} />
-            <Route path="projects" element={<ProjectManagement />} />
-            <Route path="projects/new" element={<ProjectNew />} />
-            <Route path="projects/:id" element={<ProjectDetail />} />
-            <Route path="projects/:id/characters/new" element={<CharacterNew />} />
-            <Route path="projects/:id/characters/:characterId/edit" element={<CharacterEdit />} />
-            <Route path="projects/:id/scripts" element={<ProjectScripts />} />
-            <Route path="projects/:id/scripts/new" element={<ScriptEditor />} />
-            <Route path="projects/:id/scripts/:scriptId/edit" element={<ScriptEditor />} />
-            <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
-            <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
-            <Route path="projects/:id/script/:scriptId/scenes/:sceneId/videos" element={<SceneVideos />} />
-            <Route path="projects/:id/script/:scriptId/scenes/:sceneId/generate" element={<SceneVideoGenerate />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="activate" element={<Navigate to="/projects" />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-      <Toaster />
-      <Agentation />
-    </>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <TitleBar />
+      <div className="flex-1 overflow-hidden relative bg-gray-50">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/"
+              element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}
+            >
+              <Route index element={<Navigate to="/projects" />} />
+              <Route path="projects" element={<ProjectManagement />} />
+              <Route path="projects/new" element={<ProjectNew />} />
+              <Route path="projects/:id" element={<ProjectDetail />} />
+              <Route path="projects/:id/characters/new" element={<CharacterNew />} />
+              <Route path="projects/:id/characters/:characterId/edit" element={<CharacterEdit />} />
+              <Route path="projects/:id/scripts" element={<ProjectScripts />} />
+              <Route path="projects/:id/scripts/new" element={<ScriptEditor />} />
+              <Route path="projects/:id/scripts/:scriptId/edit" element={<ScriptEditor />} />
+              <Route path="projects/:id/script/:scriptId" element={<ProjectScript />} />
+              <Route path="projects/:id/script/:scriptId/scenes/:sceneId/edit" element={<SceneEdit />} />
+              <Route path="projects/:id/script/:scriptId/scenes/:sceneId/videos" element={<SceneVideos />} />
+              <Route path="projects/:id/script/:scriptId/scenes/:sceneId/generate" element={<SceneVideoGenerate />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="activate" element={<Navigate to="/projects" />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+        <Toaster />
+        <Agentation />
+      </div>
+    </div>
   );
 }
 

@@ -107,7 +107,7 @@ export default function SceneEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-slate-600">加载中...</div>
       </div>
     );
@@ -115,14 +115,14 @@ export default function SceneEditPage() {
 
   if (!scene || !script) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-slate-600">场景不存在</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+    <>
       {/* 固定头部 */}
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-lg border-b border-white/20 shadow-sm">
         <div className="max-w-7xl mx-auto px-8 py-4">
@@ -209,7 +209,7 @@ export default function SceneEditPage() {
           onToggle={() => toggleCard('audio')}
         />
       </main>
-    </div>
+    </>
   );
 }
 

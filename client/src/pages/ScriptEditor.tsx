@@ -76,7 +76,7 @@ export default function ScriptEditor() {
           tone: scriptData.tone || '',
           synopsis: scriptData.synopsis || scriptData.description || '',
           characterIds: scriptData.scriptCharacters?.map((sc: any) => sc.characterId) ||
-                       (scriptData.characterId ? [scriptData.characterId] : []),
+            (scriptData.characterId ? [scriptData.characterId] : []),
           scenes: scriptData.scenes || [],
         });
       }
@@ -250,14 +250,14 @@ export default function ScriptEditor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
       <div className="px-6 lg:px-8 xl:px-12 py-6 max-w-[1400px] mx-auto">
         {/* 顶部操作栏 */}
         <div className="flex items-center justify-between mb-6">
@@ -355,9 +355,8 @@ export default function ScriptEditor() {
                   }}
                   placeholder="请输入剧本名称（最多50字符）"
                   maxLength={50}
-                  className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.name ? 'border-red-500' : 'border-slate-300'
-                  }`}
+                  className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-slate-300'
+                    }`}
                 />
                 <span className="text-sm text-slate-500 whitespace-nowrap">
                   {formData.name.length}/50
@@ -502,6 +501,6 @@ export default function ScriptEditor() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

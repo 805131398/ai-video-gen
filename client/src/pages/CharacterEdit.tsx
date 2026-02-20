@@ -239,7 +239,7 @@ export default function CharacterEdit() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-gray-600">加载中...</div>
       </div>
     );
@@ -250,7 +250,7 @@ export default function CharacterEdit() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* 顶部导航栏 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -267,7 +267,7 @@ export default function CharacterEdit() {
                 onClick={() => navigate(`/projects/${projectId}`)}
                 className="hover:text-gray-900 cursor-pointer transition-colors"
               >
-                {project?.name}
+                {project?.title || project?.topic}
               </button>
               <span>&gt;</span>
               <button
@@ -279,12 +279,12 @@ export default function CharacterEdit() {
               <span>&gt;</span>
               <span className="text-gray-900">编辑角色</span>
             </div>
-          </div>
-        </div>
-      </div>
+          </div >
+        </div >
+      </div >
 
       {/* 主体内容 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      < div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" >
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">
           编辑角色：{character.name}
         </h1>
@@ -411,6 +411,6 @@ export default function CharacterEdit() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </>
   );
 }

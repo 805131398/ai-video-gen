@@ -209,7 +209,7 @@ export default function SceneVideoGenerate() {
       };
       loadFromCacheOrGenerate();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, scene]);
 
   // 解析角色图片本地路径
@@ -370,14 +370,14 @@ export default function SceneVideoGenerate() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
       <div className="max-w-[1920px] mx-auto px-6 lg:px-8 xl:px-12 py-6">
         {/* 面包屑导航 */}
         <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
@@ -623,21 +623,19 @@ export default function SceneVideoGenerate() {
                   <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
                     <button
                       onClick={() => setPromptLang('zh')}
-                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                        promptLang === 'zh'
-                          ? 'bg-white text-slate-900 shadow-sm font-medium'
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
+                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${promptLang === 'zh'
+                        ? 'bg-white text-slate-900 shadow-sm font-medium'
+                        : 'text-slate-500 hover:text-slate-700'
+                        }`}
                     >
                       中文
                     </button>
                     <button
                       onClick={() => setPromptLang('en')}
-                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                        promptLang === 'en'
-                          ? 'bg-white text-slate-900 shadow-sm font-medium'
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
+                      className={`px-2.5 py-1 text-xs rounded-md transition-colors ${promptLang === 'en'
+                        ? 'bg-white text-slate-900 shadow-sm font-medium'
+                        : 'text-slate-500 hover:text-slate-700'
+                        }`}
                     >
                       English
                     </button>
@@ -659,11 +657,10 @@ export default function SceneVideoGenerate() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setWithVoice(!withVoice)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
-                      withVoice
-                        ? 'border-purple-200 bg-purple-50 text-purple-700'
-                        : 'border-slate-200 bg-slate-50 text-slate-400'
-                    }`}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${withVoice
+                      ? 'border-purple-200 bg-purple-50 text-purple-700'
+                      : 'border-slate-200 bg-slate-50 text-slate-400'
+                      }`}
                   >
                     {withVoice ? (
                       <Volume2 className="w-3.5 h-3.5" />
@@ -840,14 +837,12 @@ export default function SceneVideoGenerate() {
                     </span>
                     <button
                       onClick={() => setUseStoryboard(!useStoryboard)}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
-                        useStoryboard ? 'bg-purple-600' : 'bg-slate-200'
-                      }`}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${useStoryboard ? 'bg-purple-600' : 'bg-slate-200'
+                        }`}
                     >
                       <span
-                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                          useStoryboard ? 'translate-x-5' : ''
-                        }`}
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useStoryboard ? 'translate-x-5' : ''
+                          }`}
                       />
                     </button>
                   </div>
@@ -862,14 +857,12 @@ export default function SceneVideoGenerate() {
                       onClick={() =>
                         setUseCharacterImage(!useCharacterImage)
                       }
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
-                        useCharacterImage ? 'bg-purple-600' : 'bg-slate-200'
-                      }`}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${useCharacterImage ? 'bg-purple-600' : 'bg-slate-200'
+                        }`}
                     >
                       <span
-                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                          useCharacterImage ? 'translate-x-5' : ''
-                        }`}
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useCharacterImage ? 'translate-x-5' : ''
+                          }`}
                       />
                     </button>
                   </div>
@@ -898,6 +891,6 @@ export default function SceneVideoGenerate() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

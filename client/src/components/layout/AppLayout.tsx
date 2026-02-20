@@ -6,14 +6,9 @@ export default function AppLayout() {
   const { isCollapsed, toggle } = useSidebarState();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-full flex bg-gray-50 overflow-hidden">
       <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
-      <main
-        className={`
-          transition-all duration-300 ease-in-out
-          ${isCollapsed ? 'ml-16' : 'ml-60'}
-        `}
-      >
+      <main className="flex-1 h-full overflow-y-auto relative p-6">
         <Outlet />
       </main>
     </div>

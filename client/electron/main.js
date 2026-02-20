@@ -73,6 +73,10 @@ function createWindow() {
             contextIsolation: true,
         },
         autoHideMenuBar: true,
+        frame: false,
+        titleBarStyle: 'hidden', // Disable default frame but keep traffic lights on macOS
+        titleBarOverlay: false,
+        trafficLightPosition: { x: 12, y: 14 }, // Center vertically in 40px title bar
     });
     if (isDev) {
         // 开发模式：加载 Vite 开发服务器
