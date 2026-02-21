@@ -95,9 +95,15 @@ pnpm electron:build
 ```
 client/
 ├── electron/              # Electron 主进程
-│   ├── main.ts           # 主进程入口
-│   ├── preload.ts        # 预加载脚本
-│   └── database.ts       # SQLite 数据库管理
+│   ├── main.ts           # 主进程入口 (负责窗口创建)
+│   ├── preload.ts        # 预加载脚本 (暴露 IPC API)
+│   └── modules/          # 业务接口与相关实现逻辑 
+│       ├── index.ts      # 统一注册各种 IPC 处理函数
+│       ├── database/     # SQLite 数据库管理与 IPC 映射
+│       ├── resources/    # 资源管理 (本地缓存、文件下载等)
+│       ├── chat/         # AI 文本对话流式请求封装
+│       ├── video/        # AI 视频生成任务及轮询管理
+│       └── system/       # App 控制、存储大小计算、文件选择对话框等
 ├── src/                  # React 应用
 │   ├── pages/            # 页面组件
 │   │   ├── Login.tsx
@@ -171,13 +177,13 @@ client/
 2. 使用 `api` 实例发送请求
 3. 处理响应和错误
 
-### 添加数据库表
+### 添加数据库结构
 
-1. 在 `electron/database.ts` 的 `createTables()` 函数中添加表结构
-2. 添加对应的 CRUD 函数
-3. 在 `electron/main.ts` 注册 IPC 处理器
-4. 在 `electron/preload.ts` 暴露 API
-5. 更新 `src/types/index.ts` 类型定义
+1. 在 `electron/modules/database/service.ts` 的 `createTables()` 函数中添加表结构
+2. 在同文件中添加对应的 CRUD 函数
+3. 在 `electron/modules/database/ipc.ts` 中注册 `ipcMain.handle` 处理器
+4. 在 `electron/preload.ts` 中通过 `contextBridge.exposeInMainWorld` 暴露 API
+5. 更新 `src/types/index.ts` 中的相关 TypeScript 类型定义
 
 ## 常见问题
 

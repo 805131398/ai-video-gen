@@ -3,7 +3,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import { saveResourceDownload, updateResourceDownload, getResourceDownload, getSetting } from './database';
+import { saveResourceDownload, updateResourceDownload, getResourceDownload, getSetting } from '../database/service';
 
 // 获取资源根目录
 function getResourcesRoot(): string {
