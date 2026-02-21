@@ -92,6 +92,7 @@ contextBridge.exposeInMainWorld('electron', {
   // 存储管理
   storage: {
     selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
+    selectFile: (options?: { filters?: { name: string; extensions: string[] }[]; title?: string }) => ipcRenderer.invoke('dialog:selectFile', options),
     getDefaultPath: () => ipcRenderer.invoke('storage:getDefaultPath'),
     calculateSize: (path: string) => ipcRenderer.invoke('storage:calculateSize', path),
     clearCache: (path: string) => ipcRenderer.invoke('storage:clearCache', path),
@@ -110,5 +111,11 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.on('chat:streamChunk', handler);
       return () => ipcRenderer.removeListener('chat:streamChunk', handler);
     },
+  },
+  // 视频生成
+  video: {
+    generate: (request: any) => ipcRenderer.invoke('video:generate', request),
+    pollStatus: (request: any) => ipcRenderer.invoke('video:pollStatus', request),
+    upload: (request: any) => ipcRenderer.invoke('video:upload', request),
   },
 });

@@ -437,6 +437,225 @@ function registerIpcHandlers() {
             return '';
         }
     });
+    // ==================== 视频生成相关 IPC ====================
+    // 从嵌套对象中按点号路径取值
+    function getByPath(obj, dotPath) {
+        // 支持 data[0].url 和 data.0.url 两种数组索引写法
+        const keys = dotPath.replace(/\[(\d+)\]/g, '.$1').split('.');
+        return keys.reduce((o, k) => o?.[k], obj);
+    }
+    // 将点号路径的 key 设置到嵌套对象中
+    function setByPath(obj, dotPath, value) {
+        const keys = dotPath.split('.');
+        let current = obj;
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!(keys[i] in current))
+                current[keys[i]] = {};
+            current = current[keys[i]];
+        }
+        current[keys[keys.length - 1]] = value;
+    }
+    // 视频生成 — 提交任务
+    electron_1.ipcMain.handle('video:generate', async (_event, request) => {
+        const { baseUrl, apiKey, generateConfig, prompt, imageUrl, paramValues, conversationId, modelConfigId, modelName } = request;
+        const logId = crypto_1.default.randomUUID();
+        const startTime = Date.now();
+        try {
+            const body = {};
+            body.prompt = prompt;
+            if (imageUrl)
+                body.image_url = imageUrl;
+            for (const param of generateConfig.params) {
+                if (param.type === 'file')
+                    continue;
+                const value = paramValues[param.key] !== undefined ? paramValues[param.key] : param.value;
+                setByPath(body, param.key, value);
+            }
+            const url = baseUrl.replace(/\/+$/, '') + generateConfig.path;
+            const response = await fetch(url, {
+                method: generateConfig.method,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+            const responseText = await response.text();
+            let responseJson;
+            try {
+                responseJson = JSON.parse(responseText);
+            }
+            catch {
+                responseJson = null;
+            }
+            if (!response.ok) {
+                (0, database_1.saveAiUsageLog)({
+                    id: logId, toolType: 'video_gen', modelName: modelName || null,
+                    modelConfigId: modelConfigId || null, status: 'error',
+                    errorMessage: `HTTP ${response.status}: ${responseText.slice(0, 2000)}`,
+                    durationMs: Date.now() - startTime,
+                    requestBody: JSON.stringify({ url, body }),
+                    responseBody: responseText.slice(0, 5000),
+                    userInput: prompt.slice(0, 500), baseUrl,
+                    conversationId: conversationId || null,
+                    createdAt: new Date().toISOString(),
+                });
+                return { success: false, error: `HTTP ${response.status}: ${responseText.slice(0, 500)}` };
+            }
+            let taskId;
+            for (const mapping of generateConfig.responseMapping) {
+                if (mapping.key === 'taskId' && responseJson) {
+                    taskId = String(getByPath(responseJson, mapping.path));
+                }
+            }
+            (0, database_1.saveAiUsageLog)({
+                id: logId, toolType: 'video_gen', modelName: modelName || null,
+                modelConfigId: modelConfigId || null, status: 'success',
+                durationMs: Date.now() - startTime,
+                requestBody: JSON.stringify({ url, body }),
+                responseBody: responseText.slice(0, 5000),
+                userInput: prompt.slice(0, 500), aiOutput: taskId || '',
+                baseUrl, conversationId: conversationId || null,
+                createdAt: new Date().toISOString(),
+            });
+            return { success: true, taskId, rawResponse: responseJson };
+        }
+        catch (error) {
+            (0, database_1.saveAiUsageLog)({
+                id: logId, toolType: 'video_gen', modelName: modelName || null,
+                modelConfigId: modelConfigId || null, status: 'error',
+                errorMessage: error.message, durationMs: Date.now() - startTime,
+                requestBody: JSON.stringify({ prompt, paramValues }),
+                userInput: prompt.slice(0, 500), baseUrl,
+                conversationId: conversationId || null,
+                createdAt: new Date().toISOString(),
+            });
+            return { success: false, error: error.message };
+        }
+    });
+    // 视频生成 — 轮询任务状态
+    electron_1.ipcMain.handle('video:pollStatus', async (_event, request) => {
+        const { baseUrl, apiKey, statusConfig, taskId, conversationId, modelConfigId, modelName } = request;
+        try {
+            const statusPath = statusConfig.path.replace('{taskId}', taskId);
+            const url = baseUrl.replace(/\/+$/, '') + statusPath;
+            console.log(`[video:pollStatus] taskId=${taskId}, url=${url}`);
+            const response = await fetch(url, {
+                method: statusConfig.method,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const responseText = await response.text();
+            let responseJson;
+            try {
+                responseJson = JSON.parse(responseText);
+            }
+            catch {
+                responseJson = null;
+            }
+            console.log(`[video:pollStatus] taskId=${taskId}, HTTP ${response.status}, body=${responseText.slice(0, 1000)}`);
+            if (!response.ok) {
+                const errorMsg = `HTTP ${response.status}: ${responseText.slice(0, 500)}`;
+                console.error(`[video:pollStatus] 请求失败: ${errorMsg}`);
+                (0, database_1.saveAiUsageLog)({
+                    id: crypto_1.default.randomUUID(), toolType: 'video_gen', modelName: modelName || null,
+                    modelConfigId: modelConfigId || null, status: 'error',
+                    errorMessage: errorMsg,
+                    requestBody: JSON.stringify({ url, taskId }),
+                    responseBody: responseText.slice(0, 5000),
+                    userInput: `poll:${taskId}`, baseUrl,
+                    conversationId: conversationId || null,
+                    extraData: JSON.stringify({ stage: 'poll_status', httpStatus: response.status }),
+                    createdAt: new Date().toISOString(),
+                });
+                return { success: false, error: errorMsg };
+            }
+            const result = { success: true, rawResponse: responseJson };
+            for (const mapping of statusConfig.responseMapping) {
+                if (responseJson) {
+                    const resolved = getByPath(responseJson, mapping.path);
+                    console.log(`[video:pollStatus] mapping: key="${mapping.key}", path="${mapping.path}" → ${JSON.stringify(resolved)}`);
+                    result[mapping.key] = resolved;
+                }
+            }
+            console.log(`[video:pollStatus] taskId=${taskId}, mapped result: status=${result.status}, videoUrl=${result.videoUrl || 'N/A'}`);
+            // 记录终态日志（完成或失败）
+            const mappedStatus = (result.status || '').toLowerCase();
+            const isTerminal = ['completed', 'complete', 'succeeded', 'success', 'failed', 'error', 'cancelled'].some(s => mappedStatus.includes(s));
+            if (isTerminal) {
+                const isSuccess = ['completed', 'complete', 'succeeded', 'success'].some(s => mappedStatus.includes(s));
+                (0, database_1.saveAiUsageLog)({
+                    id: crypto_1.default.randomUUID(), toolType: 'video_gen', modelName: modelName || null,
+                    modelConfigId: modelConfigId || null, status: isSuccess ? 'success' : 'error',
+                    errorMessage: isSuccess ? null : `任务终态: ${result.status}`,
+                    requestBody: JSON.stringify({ url, taskId }),
+                    responseBody: responseText.slice(0, 5000),
+                    userInput: `poll:${taskId}`,
+                    aiOutput: result.videoUrl || '',
+                    baseUrl, conversationId: conversationId || null,
+                    extraData: JSON.stringify({ stage: 'poll_terminal', mappedStatus: result.status, videoUrl: result.videoUrl, thumbnailUrl: result.thumbnailUrl }),
+                    createdAt: new Date().toISOString(),
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            console.error(`[video:pollStatus] 异常: taskId=${taskId}, error=${error.message}`);
+            (0, database_1.saveAiUsageLog)({
+                id: crypto_1.default.randomUUID(), toolType: 'video_gen', modelName: modelName || null,
+                modelConfigId: modelConfigId || null, status: 'error',
+                errorMessage: error.message,
+                requestBody: JSON.stringify({ taskId }),
+                userInput: `poll:${taskId}`, baseUrl,
+                conversationId: conversationId || null,
+                extraData: JSON.stringify({ stage: 'poll_exception' }),
+                createdAt: new Date().toISOString(),
+            });
+            return { success: false, error: error.message };
+        }
+    });
+    // 视频生成 — 上传图片
+    electron_1.ipcMain.handle('video:upload', async (_event, request) => {
+        const { baseUrl, apiKey, uploadConfig, filePath } = request;
+        try {
+            const url = baseUrl.replace(/\/+$/, '') + uploadConfig.path;
+            const fileParam = uploadConfig.params.find((p) => p.type === 'file');
+            const fieldName = fileParam?.key || 'file';
+            const fileBuffer = await promises_1.default.readFile(filePath);
+            const fileName = path_1.default.basename(filePath);
+            const blob = new Blob([fileBuffer]);
+            const formData = new FormData();
+            formData.append(fieldName, blob, fileName);
+            const response = await fetch(url, {
+                method: uploadConfig.method,
+                headers: { 'Authorization': `Bearer ${apiKey}` },
+                body: formData,
+            });
+            const responseText = await response.text();
+            let responseJson;
+            try {
+                responseJson = JSON.parse(responseText);
+            }
+            catch {
+                responseJson = null;
+            }
+            if (!response.ok) {
+                return { success: false, error: `HTTP ${response.status}: ${responseText.slice(0, 500)}` };
+            }
+            let imageUrl;
+            for (const mapping of uploadConfig.responseMapping) {
+                if (mapping.key === 'imageUrl' && responseJson) {
+                    imageUrl = String(getByPath(responseJson, mapping.path));
+                }
+            }
+            return { success: true, imageUrl };
+        }
+        catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
     // 资源下载管理
     electron_1.ipcMain.handle('resources:download', async (_, params) => {
         return await (0, resources_1.downloadResource)(params);
@@ -501,6 +720,18 @@ function registerIpcHandlers() {
     });
     electron_1.ipcMain.handle('settings:save', async (_, key, value) => {
         return (0, database_1.saveSetting)(key, value);
+    });
+    // 存储管理 - 选择文件（图片）
+    electron_1.ipcMain.handle('dialog:selectFile', async (_, options) => {
+        const result = await electron_1.dialog.showOpenDialog({
+            properties: ['openFile'],
+            title: options?.title || '选择文件',
+            filters: options?.filters || [
+                { name: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'] },
+                { name: '所有文件', extensions: ['*'] },
+            ],
+        });
+        return result.canceled ? undefined : result.filePaths[0];
     });
     // 存储管理 - 选择文件夹
     electron_1.ipcMain.handle('dialog:selectFolder', async () => {

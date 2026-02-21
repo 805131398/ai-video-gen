@@ -40,14 +40,6 @@ const menuItems: MenuItem[] = [
     path: '/scripts',
   },
   {
-    id: 'create',
-    label: '创建视频',
-    icon: Video,
-    path: '/create',
-    disabled: true,
-    badge: '即将上线',
-  },
-  {
     id: 'stats',
     label: '使用统计',
     icon: BarChart3,

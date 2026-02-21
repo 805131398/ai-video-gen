@@ -8,7 +8,7 @@ export default function AppLayout() {
   return (
     <div className="h-full flex bg-gray-50 overflow-hidden">
       <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
-      <main className="flex-1 h-full overflow-y-auto relative p-6">
+      <main className="flex-1 h-full overflow-y-auto relative">
         <Outlet />
       </main>
     </div>

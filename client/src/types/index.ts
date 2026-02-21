@@ -208,6 +208,7 @@ export interface ElectronAPI {
   };
   storage: {
     selectFolder: () => Promise<string | undefined>;
+    selectFile: (options?: { filters?: { name: string; extensions: string[] }[]; title?: string }) => Promise<string | undefined>;
     getDefaultPath: () => Promise<string>;
     calculateSize: (path: string) => Promise<{ bytes: number; count: number }>;
     clearCache: (path: string) => Promise<{ success: boolean; deletedCount: number }>;
@@ -220,6 +221,12 @@ export interface ElectronAPI {
   chat: {
     sendMessage: (request: AiChatRequest) => Promise<string>;
     onStreamChunk: (callback: (chunk: AiChatStreamChunk) => void) => () => void;
+  };
+  // 视频生成
+  video: {
+    generate: (request: VideoGenerateRequest) => Promise<VideoGenerateResult>;
+    pollStatus: (request: VideoPollStatusRequest) => Promise<VideoPollStatusResult>;
+    upload: (request: VideoUploadRequest) => Promise<VideoUploadResult>;
   };
 }
 
@@ -446,6 +453,42 @@ export interface ScenePromptCache {
 // AI 工具类型
 export type AiToolType = 'text_chat' | 'image_gen' | 'video_gen' | 'music_gen';
 
+// 动态参数字段定义
+export interface ParamField {
+  key: string;                          // 请求体中的字段名，支持点号嵌套如 "metadata.n"
+  label: string;                        // 显示名称
+  value: string | number | boolean;     // 默认值
+  type: 'string' | 'number' | 'boolean' | 'select' | 'file';  // 值类型
+  options?: (string | number)[];        // select 类型的可选值
+  remark?: string;                      // 备注说明
+  required?: boolean;                   // 是否必填
+}
+
+// 响应字段映射（适配器模式：内部标准 key → API 实际字段路径）
+export interface ResponseField {
+  key: string;       // 内部标准标识，如 "taskId", "videoUrl", "status"
+  label: string;     // 显示名称
+  path: string;      // API 响应 JSON 中的字段路径，如 "id", "output.video_url"
+  remark?: string;   // 备注说明
+}
+
+// 单个接口的完整配置
+export interface EndpointConfig {
+  path: string;                     // 接口路径，如 "/videos/generations"
+  method: 'GET' | 'POST';          // 请求方法
+  params: ParamField[];             // 请求参数
+  responseMapping: ResponseField[]; // 响应字段映射
+}
+
+// 视频生成专属配置
+export interface VideoGenConfig {
+  endpoints: {
+    generate: EndpointConfig;   // 生成接口
+    status: EndpointConfig;     // 状态查询接口
+    upload: EndpointConfig;     // 图片上传接口
+  };
+}
+
 // AI 工具配置
 export interface AiToolConfig {
   id: string;
@@ -458,6 +501,7 @@ export interface AiToolConfig {
   description?: string | null;
   isDefault: boolean;
   sortOrder: number;
+  extraConfig?: VideoGenConfig | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -480,6 +524,16 @@ export interface ChatMessage {
   content: string;
   modelName: string | null;
   createdAt: string;
+  // 视频生成相关
+  videoMeta?: {
+    taskId?: string;
+    videoUrl?: string;
+    thumbnailUrl?: string;
+    prompt?: string;
+    params?: Record<string, any>;
+    status?: string;
+    modelConfigId?: string;
+  } | null;
 }
 
 // AI 聊天请求参数
@@ -499,6 +553,73 @@ export interface AiChatRequest {
 export interface AiChatStreamChunk {
   type: 'delta' | 'done' | 'error';
   content?: string;
+  error?: string;
+}
+
+// 视频生成请求参数
+export interface VideoGenerateRequest {
+  baseUrl: string;
+  apiKey: string;
+  generateConfig: EndpointConfig;
+  prompt: string;
+  imageUrl?: string;
+  paramValues: Record<string, string | number | boolean>;
+  conversationId?: string;
+  modelConfigId?: string;
+  modelName?: string;
+}
+
+// 视频生成响应
+export interface VideoGenerateResult {
+  success: boolean;
+  taskId?: string;
+  error?: string;
+  rawResponse?: any;
+}
+
+// 视频状态轮询请求
+export interface VideoPollStatusRequest {
+  baseUrl: string;
+  apiKey: string;
+  statusConfig: EndpointConfig;
+  taskId: string;
+  conversationId?: string;
+  modelConfigId?: string;
+  modelName?: string;
+}
+
+// 视频状态轮询响应
+export interface VideoPollStatusResult {
+  success: boolean;
+  status?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  error?: string;
+  rawResponse?: any;
+}
+
+// 视频上传请求
+export interface VideoUploadRequest {
+  baseUrl: string;
+  apiKey: string;
+  uploadConfig: EndpointConfig;
+  filePath: string;
+}
+
+// 视频上传响应
+export interface VideoUploadResult {
+  success: boolean;
+  imageUrl?: string;
+  error?: string;
+}
+
+// 视频生成进度状态（前端用）
+export interface VideoGenProgress {
+  stage: 'uploading' | 'submitting' | 'generating' | 'completed' | 'failed';
+  taskId?: string;
+  status?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
   error?: string;
 }
 

@@ -267,10 +267,18 @@ function createTables() {
       description TEXT,
       is_default INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL DEFAULT 0,
+      extra_config TEXT,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL
     )
     `);
+
+  // 迁移：为已有表添加 extra_config 列
+  try {
+    db.exec(`ALTER TABLE ai_tool_configs ADD COLUMN extra_config TEXT`);
+  } catch {
+    // 列已存在则忽略
+  }
 
   // 对话会话表
   db.exec(`
@@ -292,10 +300,18 @@ function createTables() {
       role TEXT NOT NULL,
       content TEXT NOT NULL,
       model_name TEXT,
+      video_meta TEXT,
       created_at DATETIME NOT NULL,
       FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
     )
     `);
+
+  // 迁移：为已有表添加 video_meta 列
+  try {
+    db.exec(`ALTER TABLE chat_messages ADD COLUMN video_meta TEXT`);
+  } catch {
+    // 列已存在则忽略
+  }
 
   // AI 使用日志表
   db.exec(`
@@ -1247,8 +1263,8 @@ export function saveAiToolConfig(config: any) {
       INSERT OR REPLACE INTO ai_tool_configs(
         id, tool_type, name, provider, base_url, api_key,
         model_name, description, is_default, sort_order,
-        created_at, updated_at
-      ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        extra_config, created_at, updated_at
+      ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       config.id,
@@ -1261,6 +1277,7 @@ export function saveAiToolConfig(config: any) {
       config.description || null,
       config.isDefault ? 1 : 0,
       config.sortOrder ?? 0,
+      config.extraConfig ? JSON.stringify(config.extraConfig) : null,
       config.createdAt || now,
       config.updatedAt || now
     );
@@ -1340,6 +1357,10 @@ export function deleteAiToolConfig(configId: string) {
 
 // 内部辅助：row → camelCase 对象
 function mapAiToolConfigRow(row: any) {
+  let extraConfig = null;
+  if (row.extra_config) {
+    try { extraConfig = JSON.parse(row.extra_config); } catch { /* ignore */ }
+  }
   return {
     id: row.id,
     toolType: row.tool_type,
@@ -1351,6 +1372,7 @@ function mapAiToolConfigRow(row: any) {
     description: row.description,
     isDefault: row.is_default === 1,
     sortOrder: row.sort_order,
+    extraConfig,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1440,8 +1462,8 @@ export function saveChatMessage(message: any) {
     const now = new Date().toISOString();
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO chat_messages(
-        id, conversation_id, role, content, model_name, created_at
-      ) VALUES(?, ?, ?, ?, ?, ?)
+        id, conversation_id, role, content, model_name, video_meta, created_at
+      ) VALUES(?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       message.id,
@@ -1449,6 +1471,7 @@ export function saveChatMessage(message: any) {
       message.role,
       message.content,
       message.modelName || null,
+      message.videoMeta ? JSON.stringify(message.videoMeta) : null,
       message.createdAt || now
     );
     // 更新会话的 updated_at
@@ -1466,14 +1489,21 @@ export function getChatMessages(conversationId: string) {
   try {
     const stmt = db.prepare('SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC');
     const rows: any[] = stmt.all(conversationId);
-    return rows.map((row) => ({
-      id: row.id,
-      conversationId: row.conversation_id,
-      role: row.role,
-      content: row.content,
-      modelName: row.model_name,
-      createdAt: row.created_at,
-    }));
+    return rows.map((row) => {
+      let videoMeta = null;
+      if (row.video_meta) {
+        try { videoMeta = JSON.parse(row.video_meta); } catch { /* ignore */ }
+      }
+      return {
+        id: row.id,
+        conversationId: row.conversation_id,
+        role: row.role,
+        content: row.content,
+        modelName: row.model_name,
+        videoMeta,
+        createdAt: row.created_at,
+      };
+    });
   } catch (error) {
     console.error('Error getting chat messages:', error);
     return [];
