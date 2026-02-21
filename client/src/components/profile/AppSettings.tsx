@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettingsStore } from '@/store/settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { showToast } from '@/components/ui/mini-toast';
 import { Trash2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -27,7 +27,6 @@ function formatBytes(bytes: number): string {
 
 function ClearCacheSection() {
   const { clearCache, storageUsage, isLoading } = useSettingsStore();
-  const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -37,24 +36,13 @@ function ClearCacheSection() {
       const result = await clearCache();
 
       if (result.success) {
-        toast({
-          title: '清理成功',
-          description: `已删除 ${result.deletedCount} 个文件`,
-        });
+        showToast(`已删除 ${result.deletedCount} 个文件`);
       } else {
-        toast({
-          title: '清理失败',
-          description: '无法清理缓存文件',
-          variant: 'destructive',
-        });
+        showToast('无法清理缓存文件', 'error');
       }
     } catch (error) {
       console.error('Clear cache error:', error);
-      toast({
-        title: '清理失败',
-        description: '发生未知错误',
-        variant: 'destructive',
-      });
+      showToast('清理失败', 'error');
     } finally {
       setIsClearing(false);
       setShowDialog(false);

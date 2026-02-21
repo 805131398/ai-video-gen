@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { createCharacter } from '../services/project';
+import { createCharacter } from '../services/character';
 import { CreateCharacterRequest } from '../types';
-import { useToast } from '../hooks/use-toast';
+import { showToast } from '../components/ui/mini-toast';
 
 export default function CharacterNew() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,8 +18,7 @@ export default function CharacterNew() {
   const [attributes, setAttributes] = useState<Record<string, string>>({});
 
   const handleBack = () => {
-    if (!projectId) return;
-    navigate(`/projects/${projectId}`);
+    navigate(projectId ? `/projects/${projectId}` : '/characters');
   };
 
   const handleCancel = () => {
@@ -28,7 +26,6 @@ export default function CharacterNew() {
   };
 
   const handleSave = async (returnToList: boolean) => {
-    if (!projectId) return;
     if (!name.trim() || !description.trim()) {
       setError('请填写必填字段');
       return;
@@ -46,27 +43,20 @@ export default function CharacterNew() {
         sortOrder: 0,
       };
 
-      const savedCharacter = await createCharacter(projectId, data);
+      const savedCharacter = await createCharacter({ ...data, projectId: projectId || undefined });
 
-      toast({
-        title: '创建成功',
-        description: '角色已成功创建',
-      });
+      showToast('角色已成功创建');
 
       if (returnToList) {
         // 保存并返回列表
-        navigate(`/projects/${projectId}`);
+        navigate(projectId ? `/projects/${projectId}` : '/characters');
       } else {
         // 保存后跳转到编辑页面的数字人 tab
-        navigate(`/projects/${projectId}/characters/${savedCharacter.id}/edit#digital-human`);
+        navigate(projectId ? `/projects/${projectId}/characters/${savedCharacter.id}/edit#digital-human` : `/characters/${savedCharacter.id}/edit#digital-human`);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || '创建失败，请重试');
-      toast({
-        title: '创建失败',
-        description: err.response?.data?.message || '请重试',
-        variant: 'destructive',
-      });
+      showToast(err.response?.data?.message || '创建失败，请重试', 'error');
     } finally {
       setLoading(false);
     }
@@ -87,18 +77,22 @@ export default function CharacterNew() {
             </button>
             <div className="ml-4 text-sm text-gray-500 flex items-center gap-1">
               <button
-                onClick={() => navigate(`/projects/${projectId}`)}
+                onClick={() => navigate(projectId ? `/projects/${projectId}` : '/characters')}
                 className="hover:text-gray-900 cursor-pointer transition-colors"
               >
-                项目详情
+                {projectId ? '项目详情' : '返回列表'}
               </button>
-              <span>&gt;</span>
-              <button
-                onClick={() => navigate(`/projects/${projectId}`)}
-                className="hover:text-gray-900 cursor-pointer transition-colors"
-              >
-                角色管理
-              </button>
+              {projectId && (
+                <>
+                  <span>&gt;</span>
+                  <button
+                    onClick={() => navigate(`/projects/${projectId}`)}
+                    className="hover:text-gray-900 cursor-pointer transition-colors"
+                  >
+                    角色管理
+                  </button>
+                </>
+              )}
               <span>&gt;</span>
               <span className="text-gray-900">新建角色</span>
             </div>

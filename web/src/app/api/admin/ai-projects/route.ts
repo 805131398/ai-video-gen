@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ProjectStatus } from "@/generated/prisma/enums";
+import type { ProjectStatus } from "@/types/ai-video";
 
 // GET /api/admin/ai-projects - 获取所有用户作品（管理员审核）
 export async function GET(request: NextRequest) {

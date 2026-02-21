@@ -33,7 +33,9 @@ export interface ActivationRecord {
 // 项目角色
 export interface ProjectCharacter {
   id: string;
-  projectId: string;
+  projectId?: string | null;
+  tenantId?: string | null;
+  userId?: string | null;
   name: string;
   description: string;
   avatarUrl?: string | null;
@@ -140,6 +142,7 @@ export interface ElectronAPI {
     // 角色管理
     saveCharacter: (character: ProjectCharacter) => Promise<boolean>;
     getProjectCharacters: (projectId: string) => Promise<ProjectCharacter[]>;
+    getAllCharacters: () => Promise<ProjectCharacter[]>;
     deleteCharacter: (characterId: string) => Promise<boolean>;
     // 数字人管理
     saveDigitalHuman: (digitalHuman: DigitalHuman) => Promise<boolean>;
@@ -167,12 +170,37 @@ export interface ElectronAPI {
     getProviderUploadRecord: (localResourceHash: string, providerName: string) => Promise<ProviderUploadRecord | null>;
     saveProviderUploadRecord: (record: ProviderUploadRecord) => Promise<boolean>;
     deleteProviderUploadRecord: (localResourceHash: string, providerName: string) => Promise<boolean>;
+    // AI 工具配置管理
+    saveAiToolConfig: (config: AiToolConfig) => Promise<boolean>;
+    getAiToolConfigs: () => Promise<AiToolConfig[]>;
+    getAiToolConfigsByType: (toolType: string) => Promise<AiToolConfig[]>;
+    getDefaultAiToolConfig: (toolType: string) => Promise<AiToolConfig | null>;
+    setDefaultAiToolConfig: (toolType: string, configId: string) => Promise<boolean>;
+    deleteAiToolConfig: (configId: string) => Promise<boolean>;
+    // 对话管理
+    saveChatConversation: (conversation: ChatConversation) => Promise<boolean>;
+    getChatConversations: () => Promise<ChatConversation[]>;
+    deleteChatConversation: (conversationId: string) => Promise<boolean>;
+    updateChatConversationTitle: (conversationId: string, title: string) => Promise<boolean>;
+    // 对话消息管理
+    saveChatMessage: (message: ChatMessage) => Promise<boolean>;
+    getChatMessages: (conversationId: string) => Promise<ChatMessage[]>;
+    deleteChatMessages: (conversationId: string) => Promise<boolean>;
+    // 使用日志管理
+    saveAiUsageLog: (log: AiUsageLog) => Promise<boolean>;
+    getAiUsageLogs: (query: UsageStatsQuery) => Promise<{ logs: AiUsageLog[]; total: number }>;
+    getUsageStatsSummary: (query: UsageStatsQuery) => Promise<UsageStatsSummary>;
+    getDailyUsageStats: (query: UsageStatsQuery) => Promise<DailyUsageStat[]>;
+    deleteAiUsageLog: (logId: string) => Promise<boolean>;
+    clearAiUsageLogs: () => Promise<boolean>;
   };
   resources: {
     download: (params: DownloadResourceParams) => Promise<DownloadResult>;
     getStatus: (resourceType: string, resourceId: string) => Promise<ResourceDownloadStatus | null>;
     retry: (resourceType: string, resourceId: string) => Promise<DownloadResult>;
     readFileInfo: (filePath: string) => Promise<FileInfoResult>;
+    openFolder?: (filePath?: string) => Promise<{ success: boolean; error?: string; path?: string }>;
+    getRootPath?: () => Promise<string>;
   };
   settings: {
     get: (key: string) => Promise<string | null>;
@@ -189,16 +217,22 @@ export interface ElectronAPI {
     maximize: () => void;
     close: () => void;
   };
+  chat: {
+    sendMessage: (request: AiChatRequest) => Promise<string>;
+    onStreamChunk: (callback: (chunk: AiChatStreamChunk) => void) => () => void;
+  };
 }
 
 // 资源下载参数
 export interface DownloadResourceParams {
   url: string;
-  resourceType: 'character_avatar' | 'digital_human' | 'scene_video' | 'video_thumbnail';
+  resourceType: 'character_avatar' | 'digital_human' | 'scene_video' | 'video_thumbnail' | 'chat_resource';
   resourceId: string;
-  projectId: string;
+  projectId?: string;
   characterId?: string;
   sceneId?: string;
+  conversationId?: string;
+  customSavePath?: string; // 另存为时的自定义路径
 }
 
 // 下载结果
@@ -225,38 +259,44 @@ declare global {
 
 // 剧本场景内容
 export interface SceneContent {
-  description: string;
-  characterId: string; // 主要角色ID
-  otherCharacters?: Array<{
+  description?: string;
+  sceneType?: 'indoor' | 'outdoor' | 'special';
+  characters?: Array<{
     characterId: string;
-    role: string; // 在场景中的角色描述
+    characterName?: string;
+    action?: string;
+    emotion?: string;
+    position?: 'left' | 'center' | 'right';
   }>;
-  actions: {
-    entrance: string; // 入场动作
-    main: string;     // 主要动作
-    exit: string;     // 出场动作
-  };
-  dialogues: Array<{
+  dialogues?: Array<{
+    characterId?: string;
     text: string;
-    speaker: string; // 说话人（角色名称）
+    speed?: 'slow' | 'normal' | 'fast';
+    tone?: string;
   }>;
-  camera: {
-    type: 'fixed' | 'follow' | 'orbit' | 'handheld';
-    movement: 'push' | 'pull' | 'pan' | 'tilt' | 'dolly';
-    shotSize: 'closeup' | 'close' | 'medium' | 'full' | 'wide';
-    description: string;
+  camera?: {
+    type?: 'closeup' | 'medium' | 'full' | 'wide' | 'fixed' | 'follow' | 'orbit' | 'handheld';
+    movement?: 'static' | 'push' | 'pull' | 'follow' | 'pan' | 'tilt' | 'dolly';
+    shotSize?: 'closeup' | 'close' | 'medium' | 'full' | 'wide';
+    description?: string;
   };
-  visual: {
-    lighting: 'daylight' | 'night' | 'indoor' | 'golden' | 'overcast';
-    mood: 'warm' | 'cool' | 'vintage' | 'vibrant' | 'muted';
-    effects: string;
-    description: string;
+  visual?: {
+    transition?: string;
+    effects?: string[] | string;
+    subtitleStyle?: string;
+    lighting?: 'daylight' | 'night' | 'indoor' | 'golden' | 'overcast' | 'studio' | 'dramatic';
+    mood?: 'warm' | 'cool' | 'vintage' | 'vibrant' | 'muted' | 'bright' | 'dark' | 'contrasty';
+    description?: string;
   };
-  audio: {
-    bgMusic: string;
-    soundEffects: string; // 字符串，不是数组
-    volume: number; // 0-100
+  audio?: {
+    bgm?: string;
+    bgMusic?: string;
+    soundEffects?: string[] | string;
+    volume?: number;
   };
+  // Fallback for old schema
+  characterId?: string;
+  actions?: Record<string, any>;
 }
 
 // 剧本场景
@@ -275,8 +315,12 @@ export interface ScriptScene {
 export interface ProjectScript {
   id: string;
   projectId: string;
-  characterId: string;
+  characterId?: string;
   title: string;
+  name?: string;
+  tone?: string;
+  synopsis?: string;
+  characterIds?: string[];
   description?: string | null;
   version: number;
   isActive: boolean;
@@ -399,3 +443,111 @@ export interface ScenePromptCache {
   updatedAt?: string;
 }
 
+// AI 工具类型
+export type AiToolType = 'text_chat' | 'image_gen' | 'video_gen' | 'music_gen';
+
+// AI 工具配置
+export interface AiToolConfig {
+  id: string;
+  toolType: AiToolType;
+  name: string;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  modelName?: string | null;
+  description?: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 对话会话
+export interface ChatConversation {
+  id: string;
+  title: string;
+  modelConfigId: string | null;
+  toolType: AiToolType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 对话消息
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  modelName: string | null;
+  createdAt: string;
+}
+
+// AI 聊天请求参数
+export interface AiChatRequest {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  messages: { role: string; content: string }[];
+  temperature?: number;
+  maxTokens?: number;
+  conversationId?: string;
+  modelConfigId?: string;
+  toolType?: AiToolType;
+}
+
+// AI 聊天流式响应块
+export interface AiChatStreamChunk {
+  type: 'delta' | 'done' | 'error';
+  content?: string;
+  error?: string;
+}
+
+// AI 使用日志
+export interface AiUsageLog {
+  id: string;
+  toolType: AiToolType;
+  modelName: string | null;
+  modelConfigId: string | null;
+  status: 'success' | 'error';
+  errorMessage: string | null;
+  durationMs: number | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  requestBody: string | null;
+  responseBody: string | null;
+  userInput: string | null;
+  aiOutput: string | null;
+  conversationId: string | null;
+  baseUrl: string | null;
+  temperature: number | null;
+  maxTokens: number | null;
+  extraData: string | null;
+  createdAt: string;
+}
+
+// 使用统计查询参数
+export interface UsageStatsQuery {
+  toolType?: AiToolType;
+  status?: 'success' | 'error';
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+// 使用统计汇总
+export interface UsageStatsSummary {
+  totalCount: number;
+  successCount: number;
+  errorCount: number;
+  totalTokens: number;
+  totalDurationMs: number;
+}
+
+// 每日统计（趋势图用）
+export interface DailyUsageStat {
+  date: string;
+  count: number;
+  tokens: number;
+}

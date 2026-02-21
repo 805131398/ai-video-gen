@@ -20,8 +20,8 @@ export default function CharacterDialogueCard({
   onToggle,
 }: CharacterDialogueCardProps) {
   const content = (formData.content || {}) as SceneContent;
-  const dialogues = (content.dialogues || []) as Array<{ text: string; speaker: string }>;
-  const otherCharacters = (content.otherCharacters || []) as Array<{ characterId: string; role: string }>;
+  const dialogues = (content.dialogues || []) as Array<{ text: string; characterId?: string; speed?: 'slow' | 'normal' | 'fast'; tone?: string }>;
+  const otherCharacters = (content.characters || []) as Array<{ characterId: string; role: string }>;
   const actions = (content.actions || { entrance: '', main: '', exit: '' }) as { entrance: string; main: string; exit: string };
 
   const handleCharacterChange = (characterId: string) => {
@@ -34,7 +34,7 @@ export default function CharacterDialogueCard({
   const handleAddOtherCharacter = () => {
     onChange('content', {
       ...content,
-      otherCharacters: [...otherCharacters, { characterId: '', role: '' }],
+      characters: [...otherCharacters, { characterId: '', role: '' }],
     });
   };
 
@@ -43,7 +43,7 @@ export default function CharacterDialogueCard({
     newOtherCharacters[index] = { ...newOtherCharacters[index], [field]: value };
     onChange('content', {
       ...content,
-      otherCharacters: newOtherCharacters,
+      characters: newOtherCharacters,
     });
   };
 
@@ -51,7 +51,7 @@ export default function CharacterDialogueCard({
     const newOtherCharacters = otherCharacters.filter((_, i) => i !== index);
     onChange('content', {
       ...content,
-      otherCharacters: newOtherCharacters,
+      characters: newOtherCharacters,
     });
   };
 
@@ -68,7 +68,7 @@ export default function CharacterDialogueCard({
   const handleAddDialogue = () => {
     onChange('content', {
       ...content,
-      dialogues: [...dialogues, { text: '', speaker: '' }],
+      dialogues: [...dialogues, { text: '', characterId: '' }],
     });
   };
 
@@ -158,54 +158,54 @@ export default function CharacterDialogueCard({
                 暂无其他角色，点击"添加角色"添加场景中的其他角色
               </div>
             ) : (
-                <div className="space-y-3">
+              <div className="space-y-3">
                 {otherCharacters.map((otherChar: { characterId: string; role: string }, index: number) => {
                   const character = characters.find((c) => c.id === otherChar.characterId);
                   return (
-                  <div key={index} className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600">
-                    {index + 1}
-                    </div>
-                    <div className="flex-1 space-y-3">
-                    <div>
-                      <label className="block text-xs text-slate-600 mb-1">角色</label>
-                      <select
-                      value={otherChar.characterId || ''}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleOtherCharacterChange(index, 'characterId', e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 cursor-pointer"
+                    <div key={index} className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">角色</label>
+                          <select
+                            value={otherChar.characterId || ''}
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleOtherCharacterChange(index, 'characterId', e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 cursor-pointer"
+                          >
+                            <option value="">请选择角色</option>
+                            {characters.map((character) => (
+                              <option key={character.id} value={character.id}>
+                                {character.name}
+                              </option>
+                            ))}
+                          </select>
+                          {character && (
+                            <p className="mt-1 text-xs text-slate-500">{character.description}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">在场景中的角色</label>
+                          <input
+                            type="text"
+                            value={otherChar.role || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtherCharacterChange(index, 'role', e.target.value)}
+                            placeholder="例如：接受治疗的患者、旁观的家人"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 placeholder-slate-400"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteOtherCharacter(index)}
+                        className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                       >
-                      <option value="">请选择角色</option>
-                      {characters.map((character) => (
-                        <option key={character.id} value={character.id}>
-                        {character.name}
-                        </option>
-                      ))}
-                      </select>
-                      {character && (
-                      <p className="mt-1 text-xs text-slate-500">{character.description}</p>
-                      )}
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-xs text-slate-600 mb-1">在场景中的角色</label>
-                      <input
-                      type="text"
-                      value={otherChar.role || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtherCharacterChange(index, 'role', e.target.value)}
-                      placeholder="例如：接受治疗的患者、旁观的家人"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 placeholder-slate-400"
-                      />
-                    </div>
-                    </div>
-                    <button
-                    onClick={() => handleDeleteOtherCharacter(index)}
-                    className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                    <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                   );
                 })}
-                </div>
+              </div>
             )}
           </div>
 
@@ -272,28 +272,28 @@ export default function CharacterDialogueCard({
                 暂无台词，点击"添加台词"开始编辑
               </div>
             ) : (
-                <div className="space-y-3">
-                {dialogues.map((dialogue: SceneContent['dialogues'][number], index: number) => (
+              <div className="space-y-3">
+                {dialogues.map((dialogue: any, index: number) => (
                   <div key={index} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-600">
-                    {index + 1}
-                  </div>
-                  <textarea
-                    value={dialogue.text}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleDialogueChange(index, e.target.value)}
-                    placeholder="输入台词内容..."
-                    rows={2}
-                    className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 placeholder-slate-400 resize-none"
-                  />
-                  <button
-                    onClick={() => handleDeleteDialogue(index)}
-                    className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-600">
+                      {index + 1}
+                    </div>
+                    <textarea
+                      value={dialogue.text}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleDialogueChange(index, e.target.value)}
+                      placeholder="输入台词内容..."
+                      rows={2}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors duration-200 text-sm text-slate-900 placeholder-slate-400 resize-none"
+                    />
+                    <button
+                      onClick={() => handleDeleteDialogue(index)}
+                      className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
-                </div>
+              </div>
             )}
           </div>
         </div>

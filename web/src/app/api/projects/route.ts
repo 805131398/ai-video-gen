@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { prisma } from "@/lib/prisma";
-import { ProjectStatus } from "@/generated/prisma/enums";
+import type { ProjectStatus } from "@/types/ai-video";
 
 // GET /api/projects - 获取作品列表
 export async function GET(request: NextRequest) {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         tenantId: user.tenantId || null,
         topic: topic || "",
-        status: ProjectStatus.DRAFT,
+        status: "DRAFT",
         themeId,
         themeName,
         themeDesc,

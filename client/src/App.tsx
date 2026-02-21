@@ -9,17 +9,23 @@ import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
 import CharacterNew from './pages/CharacterNew';
 import CharacterEdit from './pages/CharacterEdit';
+import CharacterManagement from './pages/CharacterManagement';
 import ProjectScripts from './pages/ProjectScripts';
 import ProjectScript from './pages/ProjectScript';
+import ScriptManagement from './pages/ScriptManagement';
 import ScriptEditor from './pages/ScriptEditor';
 import SceneEdit from './pages/SceneEdit';
 import SceneVideos from './pages/SceneVideos';
 import SceneVideoGenerate from './pages/SceneVideoGenerate';
 import Profile from './pages/Profile';
+import AiToolManagement from './pages/AiToolManagement';
+import AiChat from './pages/AiChat';
+import UsageStats from './pages/UsageStats';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthStore } from './store/auth';
 import { getUserProfile, getSubscriptionStatus } from './services/auth';
 import { Toaster } from './components/ui/toaster';
+import { MiniToastProvider } from './components/ui/mini-toast';
 
 function App() {
   const { isAuthenticated, login } = useAuthStore();
@@ -60,6 +66,7 @@ function App() {
 
 
   return (
+    <MiniToastProvider>
     <div className="h-screen flex flex-col overflow-hidden">
       <TitleBar />
       <div className="flex-1 overflow-hidden relative bg-gray-50">
@@ -75,6 +82,10 @@ function App() {
               <Route path="projects" element={<ProjectManagement />} />
               <Route path="projects/new" element={<ProjectNew />} />
               <Route path="projects/:id" element={<ProjectDetail />} />
+              <Route path="characters" element={<CharacterManagement />} />
+              <Route path="characters/new" element={<CharacterNew />} />
+              <Route path="characters/:characterId/edit" element={<CharacterEdit />} />
+              <Route path="scripts" element={<ScriptManagement />} />
               <Route path="projects/:id/characters/new" element={<CharacterNew />} />
               <Route path="projects/:id/characters/:characterId/edit" element={<CharacterEdit />} />
               <Route path="projects/:id/scripts" element={<ProjectScripts />} />
@@ -85,6 +96,9 @@ function App() {
               <Route path="projects/:id/script/:scriptId/scenes/:sceneId/videos" element={<SceneVideos />} />
               <Route path="projects/:id/script/:scriptId/scenes/:sceneId/generate" element={<SceneVideoGenerate />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="ai-tools" element={<AiToolManagement />} />
+              <Route path="ai-chat" element={<AiChat />} />
+              <Route path="stats" element={<UsageStats />} />
               <Route path="activate" element={<Navigate to="/projects" />} />
             </Route>
           </Routes>
@@ -93,6 +107,7 @@ function App() {
         <Agentation />
       </div>
     </div>
+    </MiniToastProvider>
   );
 }
 

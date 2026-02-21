@@ -104,7 +104,7 @@ export async function deleteProjectFromLocal(projectId: string): Promise<boolean
  * 同步角色到本地
  */
 export async function syncCharacterToLocal(
-  projectId: string,
+  projectId: string | null | undefined,
   character: ProjectCharacter
 ): Promise<boolean> {
   try {
@@ -117,7 +117,7 @@ export async function syncCharacterToLocal(
         url: character.avatarUrl,
         resourceType: 'character_avatar',
         resourceId: character.id,
-        projectId,
+        projectId: character.projectId || projectId || undefined,
         characterId: character.id,
       });
     }
@@ -125,7 +125,7 @@ export async function syncCharacterToLocal(
     // 同步数字人数据
     if (character.digitalHumans && character.digitalHumans.length > 0) {
       for (const dh of character.digitalHumans) {
-        await syncDigitalHumanToLocal(projectId, character.id, dh);
+        await syncDigitalHumanToLocal(character.projectId || projectId || undefined, character.id, dh);
       }
     }
 
@@ -155,13 +155,44 @@ export async function getCharactersFromLocal(projectId: string): Promise<Project
   }
 }
 
+/**
+ * 从本地获取所有角色
+ */
+export async function getAllCharactersFromLocal(): Promise<ProjectCharacter[]> {
+  try {
+    const characters = await window.electron.db.getAllCharacters();
+
+    // 为每个角色加载数字人
+    for (const character of characters) {
+      character.digitalHumans = await window.electron.db.getDigitalHumans(character.id);
+    }
+
+    return characters;
+  } catch (error) {
+    console.error('Error getting all characters from local:', error);
+    return [];
+  }
+}
+
+/**
+ * 从本地删除角色
+ */
+export async function deleteCharacterFromLocal(characterId: string): Promise<boolean> {
+  try {
+    return await window.electron.db.deleteCharacter(characterId);
+  } catch (error) {
+    console.error('Error deleting character from local:', error);
+    return false;
+  }
+}
+
 // ==================== 数字人管理 ====================
 
 /**
  * 同步数字人到本地
  */
 export async function syncDigitalHumanToLocal(
-  projectId: string,
+  projectId: string | undefined,
   characterId: string,
   digitalHuman: DigitalHuman
 ): Promise<boolean> {

@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electron', {
     // 角色管理
     saveCharacter: (character: any) => ipcRenderer.invoke('db:saveCharacter', character),
     getProjectCharacters: (projectId: string) => ipcRenderer.invoke('db:getProjectCharacters', projectId),
+    getAllCharacters: () => ipcRenderer.invoke('db:getAllCharacters'),
     deleteCharacter: (characterId: string) => ipcRenderer.invoke('db:deleteCharacter', characterId),
     // 数字人管理
     saveDigitalHuman: (digitalHuman: any) => ipcRenderer.invoke('db:saveDigitalHuman', digitalHuman),
@@ -46,6 +47,31 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('db:saveProviderUploadRecord', record),
     deleteProviderUploadRecord: (localResourceHash: string, providerName: string) =>
       ipcRenderer.invoke('db:deleteProviderUploadRecord', localResourceHash, providerName),
+    // AI 工具配置管理
+    saveAiToolConfig: (config: any) => ipcRenderer.invoke('db:saveAiToolConfig', config),
+    getAiToolConfigs: () => ipcRenderer.invoke('db:getAiToolConfigs'),
+    getAiToolConfigsByType: (toolType: string) => ipcRenderer.invoke('db:getAiToolConfigsByType', toolType),
+    getDefaultAiToolConfig: (toolType: string) => ipcRenderer.invoke('db:getDefaultAiToolConfig', toolType),
+    setDefaultAiToolConfig: (toolType: string, configId: string) =>
+      ipcRenderer.invoke('db:setDefaultAiToolConfig', toolType, configId),
+    deleteAiToolConfig: (configId: string) => ipcRenderer.invoke('db:deleteAiToolConfig', configId),
+    // 对话管理
+    saveChatConversation: (conversation: any) => ipcRenderer.invoke('db:saveChatConversation', conversation),
+    getChatConversations: () => ipcRenderer.invoke('db:getChatConversations'),
+    deleteChatConversation: (conversationId: string) => ipcRenderer.invoke('db:deleteChatConversation', conversationId),
+    updateChatConversationTitle: (conversationId: string, title: string) =>
+      ipcRenderer.invoke('db:updateChatConversationTitle', conversationId, title),
+    // 对话消息管理
+    saveChatMessage: (message: any) => ipcRenderer.invoke('db:saveChatMessage', message),
+    getChatMessages: (conversationId: string) => ipcRenderer.invoke('db:getChatMessages', conversationId),
+    deleteChatMessages: (conversationId: string) => ipcRenderer.invoke('db:deleteChatMessages', conversationId),
+    // 使用日志管理
+    saveAiUsageLog: (log: any) => ipcRenderer.invoke('db:saveAiUsageLog', log),
+    getAiUsageLogs: (query: any) => ipcRenderer.invoke('db:getAiUsageLogs', query),
+    getUsageStatsSummary: (query: any) => ipcRenderer.invoke('db:getUsageStatsSummary', query),
+    getDailyUsageStats: (query: any) => ipcRenderer.invoke('db:getDailyUsageStats', query),
+    deleteAiUsageLog: (logId: string) => ipcRenderer.invoke('db:deleteAiUsageLog', logId),
+    clearAiUsageLogs: () => ipcRenderer.invoke('db:clearAiUsageLogs'),
   },
   // 资源管理
   resources: {
@@ -75,5 +101,14 @@ contextBridge.exposeInMainWorld('electron', {
     minimize: () => ipcRenderer.send('app:minimize'),
     maximize: () => ipcRenderer.send('app:maximize'),
     close: () => ipcRenderer.send('app:close'),
+  },
+  // AI 对话
+  chat: {
+    sendMessage: (request: any) => ipcRenderer.invoke('chat:sendMessage', request),
+    onStreamChunk: (callback: (chunk: any) => void) => {
+      const handler = (_: any, chunk: any) => callback(chunk);
+      ipcRenderer.on('chat:streamChunk', handler);
+      return () => ipcRenderer.removeListener('chat:streamChunk', handler);
+    },
   },
 });

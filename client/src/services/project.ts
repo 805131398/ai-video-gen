@@ -1,4 +1,4 @@
-import api from './api';
+
 import {
   Project,
   ProjectCharacter,
@@ -8,97 +8,66 @@ import {
   GenerateCharactersResponse,
   DigitalHuman,
 } from '../types';
-import {
-  syncProjectToLocal,
-  syncCharacterToLocal,
-  syncDigitalHumanToLocal,
-  getProjectFromLocal,
-  getProjectsFromLocal,
-  getCharactersFromLocal,
-  getDigitalHumansFromLocal,
-} from './localDataService';
+import api from './api';
 
 // 创建项目
 export async function createProject(data: CreateProjectRequest): Promise<Project> {
-  const response = await api.post('/projects', data);
-  const project = response.data;
+  const project: Project = {
+    id: crypto.randomUUID(),
+    userId: '',
+    topic: data.topic || '',
+    title: data.title || null,
+    status: 'DRAFT',
+    currentStep: 'TOPIC_INPUT',
+    themeName: data.themeName || null,
+    themeDesc: data.themeDesc || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
-  // POST 只返回 { id }，补充必要字段后再同步到本地
-  if (project.id && window.electron?.db) {
-    const fullProject: Project = {
-      id: project.id,
-      userId: '',
-      topic: data.topic || '',
-      title: data.title || null,
-      status: 'DRAFT',
-      currentStep: 'TOPIC_INPUT',
-      themeName: data.themeName || null,
-      themeDesc: data.themeDesc || null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    await syncProjectToLocal(fullProject);
+  if (window.electron?.db) {
+    await window.electron.db.saveProject(project);
   }
-
   return project;
 }
 
 // 获取项目详情
 export async function getProject(id: string): Promise<Project> {
-  // 优先从本地获取
-  const localProject = await getProjectFromLocal(id);
-  if (localProject) {
-    return localProject;
+  if (window.electron?.db) {
+    const project = await window.electron.db.getProject(id);
+    if (project) {
+      // 加载角色数据
+      const characters = await window.electron.db.getProjectCharacters(id);
+      for (const character of characters) {
+        character.digitalHumans = await window.electron.db.getDigitalHumans(character.id);
+      }
+      project.characters = characters;
+      return project;
+    }
   }
-
-  // 本地没有，从服务端获取
-  const response = await api.get(`/projects/${id}`);
-  const project = response.data;
-
-  // 同步到本地
-  await syncProjectToLocal(project);
-
-  return project;
+  throw new Error('Project not found');
 }
 
 // 获取项目列表
 export async function getProjects(): Promise<Project[]> {
-  // 优先从本地获取
-  const localProjects = await getProjectsFromLocal();
-  if (localProjects.length > 0) {
-    return localProjects;
+  if (window.electron?.db) {
+    return await window.electron.db.getProjects();
   }
-
-  // 本地没有，从服务端获取
-  const response = await api.get('/projects');
-  const projects = response.data.data || [];
-
-  // 同步到本地
-  for (const project of projects) {
-    await syncProjectToLocal(project);
-  }
-
-  return projects;
+  return [];
 }
 
 // 更新项目
 export async function updateProject(id: string, data: Partial<CreateProjectRequest>): Promise<Project> {
-  const response = await api.put(`/projects/${id}`, data);
-  const project = response.data?.data || response.data;
-
-  // PUT 返回的 Prisma 对象可能没有 currentStep，同步时提供默认值
+  const existing = await getProject(id);
+  const updated: Project = { ...existing, ...data, updatedAt: new Date().toISOString() };
   if (window.electron?.db) {
-    await syncProjectToLocal(project);
+    await window.electron.db.saveProject(updated);
   }
-
-  return project;
+  return updated;
 }
 
 // 删除项目
 export async function deleteProject(id: string): Promise<void> {
-  await api.delete(`/projects/${id}`);
-
-  // 从本地删除
   if (window.electron?.db) {
     await window.electron.db.deleteProject(id);
   }
@@ -106,22 +75,10 @@ export async function deleteProject(id: string): Promise<void> {
 
 // 获取项目角色列表
 export async function getProjectCharacters(projectId: string): Promise<ProjectCharacter[]> {
-  // 优先从本地获取
-  const localCharacters = await getCharactersFromLocal(projectId);
-  if (localCharacters.length > 0) {
-    return localCharacters;
+  if (window.electron?.db) {
+    return await window.electron.db.getProjectCharacters(projectId);
   }
-
-  // 本地没有，从服务端获取
-  const response = await api.get(`/projects/${projectId}/characters`);
-  const characters = response.data.data || [];
-
-  // 同步到本地
-  for (const character of characters) {
-    await syncCharacterToLocal(projectId, character);
-  }
-
-  return characters;
+  return [];
 }
 
 // 创建角色
@@ -129,12 +86,21 @@ export async function createCharacter(
   projectId: string,
   data: CreateCharacterRequest
 ): Promise<ProjectCharacter> {
-  const response = await api.post(`/projects/${projectId}/characters`, data);
-  const character = response.data;
+  const character: ProjectCharacter = {
+    id: crypto.randomUUID(),
+    projectId,
+    name: data.name,
+    description: data.description,
+    attributes: data.attributes || {},
+    avatarUrl: data.avatarUrl,
+    sortOrder: data.sortOrder || 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
-  // 同步到本地
-  await syncCharacterToLocal(projectId, character);
-
+  if (window.electron?.db) {
+    await window.electron.db.saveCharacter(character);
+  }
   return character;
 }
 
@@ -144,80 +110,62 @@ export async function updateCharacter(
   characterId: string,
   data: Partial<CreateCharacterRequest>
 ): Promise<ProjectCharacter> {
-  const response = await api.put(`/projects/${projectId}/characters/${characterId}`, data);
-  const character = response.data;
+  if (!window.electron?.db) throw new Error('Database not available');
+  const existing = await window.electron.db.getProjectCharacters(projectId);
+  const character = existing.find(c => c.id === characterId);
+  if (!character) throw new Error('Character not found');
 
-  // 同步到本地
-  await syncCharacterToLocal(projectId, character);
-
-  return character;
+  const updated: ProjectCharacter = { ...character, ...data, updatedAt: new Date().toISOString() };
+  await window.electron.db.saveCharacter(updated);
+  return updated;
 }
 
 // 删除角色
-export async function deleteCharacter(projectId: string, characterId: string): Promise<void> {
-  await api.delete(`/projects/${projectId}/characters/${characterId}`);
-
-  // 从本地删除
+export async function deleteCharacter(_projectId: string, characterId: string): Promise<void> {
   if (window.electron?.db) {
     await window.electron.db.deleteCharacter(characterId);
   }
 }
 
-// AI 生成角色
+// 这三个因为用到了 AI, 可能是全局的接口调用
 export async function generateCharacters(
-  projectId: string,
+  _projectId: string,
   data: GenerateCharactersRequest
 ): Promise<GenerateCharactersResponse> {
-  const response = await api.post(`/projects/${projectId}/characters/generate`, data);
+  const response = await api.post(`/api/characters/generate`, data); // Note: Need to adjust endpoint in reality
   return response.data;
 }
 
-// AI 生成角色描述
 export async function generateCharacterDescription(
-  projectId: string,
+  _projectId: string,
   characterName: string
 ): Promise<string> {
-  const response = await api.post(`/projects/${projectId}/characters/generate-description`, {
-    characterName,
-  });
+  const response = await api.post(`/api/characters/generate-description`, { characterName });
   return response.data.description;
 }
 
 // 获取数字人列表
 export async function getDigitalHumans(
-  projectId: string,
+  _projectId: string,
   characterId: string,
-  forceRemote: boolean = false
+  _forceRemote: boolean = false
 ): Promise<DigitalHuman[]> {
-  // 优先从本地获取（除非强制从服务端获取）
-  if (!forceRemote) {
-    const localDigitalHumans = await getDigitalHumansFromLocal(characterId);
-    if (localDigitalHumans.length > 0) {
-      return localDigitalHumans;
-    }
+  if (window.electron?.db) {
+    return await window.electron.db.getDigitalHumans(characterId);
   }
-
-  // 从服务端获取
-  const response = await api.get(`/projects/${projectId}/characters/${characterId}/digital-humans`);
-  const digitalHumans = response.data.data || [];
-
-  // 同步到本地
-  for (const dh of digitalHumans) {
-    await syncDigitalHumanToLocal(projectId, characterId, dh);
-  }
-
-  return digitalHumans;
+  return [];
 }
 
 // 生成数字人（异步）
 export async function generateDigitalHumans(
-  projectId: string,
+  _projectId: string,
   characterId: string,
   count: number = 1,
   size?: string
 ): Promise<{ batchId: string; status: string; message: string }> {
+  // 调用无状态 API
   const response = await api.post(
-    `/projects/${projectId}/characters/${characterId}/digital-humans/generate`,
+    `/characters/${characterId}/digital-humans/generate`,
     { count, size }
   );
   return response.data;
@@ -225,18 +173,16 @@ export async function generateDigitalHumans(
 
 // 选择数字人
 export async function selectDigitalHuman(
-  projectId: string,
+  _projectId: string,
   characterId: string,
   humanId: string
 ): Promise<DigitalHuman> {
-  const response = await api.put(
-    `/projects/${projectId}/characters/${characterId}/digital-humans/${humanId}/select`
-  );
-  const digitalHuman = response.data.data;
-
-  // 同步到本地
-  await syncDigitalHumanToLocal(projectId, characterId, digitalHuman);
-
-  return digitalHuman;
+  if (!window.electron?.db) throw new Error('Database not available');
+  const humans = await window.electron.db.getDigitalHumans(characterId);
+  for (const human of humans) {
+    human.isSelected = human.id === humanId;
+    await window.electron.db.saveDigitalHuman(human);
+  }
+  const selected = humans.find(h => h.id === humanId);
+  return selected as DigitalHuman;
 }
-

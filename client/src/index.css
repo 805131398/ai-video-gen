@@ -65,6 +65,40 @@
   }
 }
 
+/* Mini Toast 动画 */
+@keyframes miniToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes miniToastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes miniToastIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes miniToastOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   @theme {
     --color-background: #0F172A;

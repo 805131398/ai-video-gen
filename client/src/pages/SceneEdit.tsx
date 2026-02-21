@@ -74,7 +74,7 @@ export default function SceneEditPage() {
     if (!id || !scriptId || !sceneId) return;
     setSaving(true);
     try {
-      await updateScene(id, scriptId, sceneId, formData);
+      await updateScene(id, scriptId, sceneId, { ...formData, duration: formData.duration ?? undefined } as any);
       setHasUnsavedChanges(false);
       navigate(`/projects/${id}/script/${scriptId}`);
     } catch (err: any) {
@@ -182,7 +182,7 @@ export default function SceneEditPage() {
       {/* 主内容区 */}
       <main className="max-w-7xl mx-auto px-8 py-6 space-y-6">
         {/* 基本信息卡片 */}
-        <BasicInfoCard formData={formData} onChange={handleFieldChange} />
+        <BasicInfoCard formData={formData as any} onChange={handleFieldChange} />
 
         {/* 角色与台词卡片 */}
         <CharacterDialogueCard

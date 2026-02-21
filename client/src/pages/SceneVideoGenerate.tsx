@@ -22,7 +22,7 @@ import {
   getScriptScenes,
   generateSceneVideo,
   previewPrompt,
-  translatePrompt,
+  translatePrompt
 } from '../services/script';
 import { getProjectCharacters } from '../services/project';
 import { saveGenerationSnapshot, saveScenePromptCache, getScenePromptCache } from '../services/localDataService';
@@ -345,16 +345,16 @@ export default function SceneVideoGenerate() {
   );
 
   // 获取其他角色
-  const otherChars = (content?.otherCharacters || [])
-    .map((oc) => {
+  const otherChars = (content?.characters || [])
+    .map((oc: any) => {
       const char = characters.find((c) => c.id === oc.characterId);
       return char ? { ...char, role: oc.role } : null;
     })
     .filter(Boolean) as (ProjectCharacter & { role: string })[];
 
   // 按角色分组台词
-  const getDialoguesForCharacter = (name: string) =>
-    (content?.dialogues || []).filter((d) => d.speaker === name);
+  const getDialoguesForCharacter = (charId: string) =>
+    (content?.dialogues || []).filter((d) => d.characterId === charId);
 
   // 镜头标签
   const cameraTags: string[] = [];
@@ -492,9 +492,9 @@ export default function SceneVideoGenerate() {
                   )}
 
                   {/* 主角台词 */}
-                  {getDialoguesForCharacter(mainCharacter.name).length > 0 && (
+                  {getDialoguesForCharacter(mainCharacter.id).length > 0 && (
                     <div className="space-y-1">
-                      {getDialoguesForCharacter(mainCharacter.name).map(
+                      {getDialoguesForCharacter(mainCharacter.id).map(
                         (d, i) => (
                           <div
                             key={i}
@@ -531,7 +531,7 @@ export default function SceneVideoGenerate() {
                       ({char.role})
                     </span>
                   </div>
-                  {getDialoguesForCharacter(char.name).map((d, i) => (
+                  {getDialoguesForCharacter(char.id).map((d, i) => (
                     <div
                       key={i}
                       className="text-sm text-slate-600 italic ml-9"

@@ -279,147 +279,146 @@ export default function CharacterDetailEditor({
       {/* 主体内容 - 三栏布局 */}
       <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-            {/* 左栏：角色信息编辑 (50%) */}
-            <div className="md:col-span-2 lg:col-span-6 space-y-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* 角色名称 */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    角色名称 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="例如：健康专家"
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    required
-                  />
-                </div>
+          {/* 左栏：角色信息编辑 (50%) */}
+          <div className="md:col-span-2 lg:col-span-6 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* 角色名称 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  角色名称 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例如：健康专家"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
 
-                {/* 角色参考图 */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    角色参考图
-                  </label>
-                  {referenceImageUrl ? (
-                    <div className="relative group max-w-sm">
-                      <img
-                        src={referenceImageUrl}
-                        alt="角色参考图"
-                        className="w-full aspect-[4/3] object-cover rounded-lg border-2 border-slate-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveReferenceImage}
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={handleReferenceImageClick}
-                      className="w-full max-w-sm aspect-[4/3] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
-                    >
-                      {uploading ? (
-                        <div className="text-center">
-                          <div className="text-lg font-semibold text-slate-700 mb-1">
-                            {uploadProgress}%
-                          </div>
-                          <div className="text-sm text-slate-500">上传中...</div>
-                        </div>
-                      ) : (
-                        <>
-                          <ImageIcon className="w-10 h-10 text-slate-400 mb-2" />
-                          <span className="text-sm font-medium text-slate-600">
-                            点击上传参考图
-                          </span>
-                          <span className="text-xs text-slate-500 mt-1">
-                            支持 JPG、PNG、WEBP，最大 5MB
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* 角色描述 */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                      角色描述 <span className="text-red-500">*</span>
-                    </label>
+              {/* 角色参考图 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  角色参考图
+                </label>
+                {referenceImageUrl ? (
+                  <div className="relative group max-w-sm">
+                    <img
+                      src={referenceImageUrl}
+                      alt="角色参考图"
+                      className="w-full aspect-[4/3] object-cover rounded-lg border-2 border-slate-200"
+                    />
                     <button
                       type="button"
-                      onClick={handleGenerateDescription}
-                      disabled={generating || !name.trim()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
+                      onClick={handleRemoveReferenceImage}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
                     >
-                      <Sparkles className="w-3 h-3" />
-                      {generating ? 'AI 生成中...' : 'AI 生成'}
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="详细描述角色的外貌、性格、穿着等特征，帮助 AI 生成一致的数字人形象"
-                    rows={5}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
-                    required
-                  />
-                  <p className="text-xs text-slate-500 mt-1.5">
-                    描述越详细，生成的数字人形象越准确
-                  </p>
-                </div>
-
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                    {error}
+                ) : (
+                  <div
+                    onClick={handleReferenceImageClick}
+                    className="w-full max-w-sm aspect-[4/3] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+                  >
+                    {uploading ? (
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-slate-700 mb-1">
+                          {uploadProgress}%
+                        </div>
+                        <div className="text-sm text-slate-500">上传中...</div>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-10 h-10 text-slate-400 mb-2" />
+                        <span className="text-sm font-medium text-slate-600">
+                          点击上传参考图
+                        </span>
+                        <span className="text-xs text-slate-500 mt-1">
+                          支持 JPG、PNG、WEBP，最大 5MB
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
-              </form>
-            </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
 
-            {/* 中栏：数字人生成与选择 (30%) */}
-            <div className="md:col-span-2 lg:col-span-4">
-              <DigitalHumanGenerator
-                projectId={projectId}
-                characterId={character?.id || ''}
-                characterName={name}
-                characterDescription={description}
-                referenceImageUrl={referenceImageUrl}
-                selectedHumanId={selectedDigitalHumanId}
-                onSelect={handleSelectDigitalHuman}
-                onGenerate={handleGenerateDigitalHumans}
-                onHistoryChange={(history, loading, generating) => {
-                  setDigitalHumansHistory(history);
-                  setHistoryLoading(loading);
-                  setHistoryGenerating(generating);
-                }}
-              />
-            </div>
+              {/* 角色描述 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    角色描述 <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={generating || !name.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {generating ? 'AI 生成中...' : 'AI 生成'}
+                  </button>
+                </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="详细描述角色的外貌、性格、穿着等特征，帮助 AI 生成一致的数字人形象"
+                  rows={5}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  描述越详细，生成的数字人形象越准确
+                </p>
+              </div>
 
-            {/* 右栏：历史数字人 (20%) - 固定高度可滚动 */}
-            <div className="md:col-span-2 lg:col-span-2 h-[600px] lg:h-[700px]">
-              <DigitalHumanHistory
-                history={digitalHumansHistory}
-                selectedHumanId={selectedDigitalHumanId}
-                loading={historyLoading}
-                generating={historyGenerating}
-                onSelect={handleSelectDigitalHuman}
-                onRegenerate={() => handleGenerateDigitalHumans(description, referenceImageUrl)}
-              />
-            </div>
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* 中栏：数字人生成与选择 (30%) */}
+          <div className="md:col-span-2 lg:col-span-4">
+            <DigitalHumanGenerator
+              characterId={character?.id || ''}
+              characterName={name}
+              characterDescription={description}
+              referenceImageUrl={referenceImageUrl}
+              selectedHumanId={selectedDigitalHumanId}
+              onSelect={handleSelectDigitalHuman}
+              onGenerate={handleGenerateDigitalHumans}
+              onHistoryChange={(history, loading, generating) => {
+                setDigitalHumansHistory(history);
+                setHistoryLoading(loading);
+                setHistoryGenerating(generating);
+              }}
+            />
+          </div>
+
+          {/* 右栏：历史数字人 (20%) - 固定高度可滚动 */}
+          <div className="md:col-span-2 lg:col-span-2 h-[600px] lg:h-[700px]">
+            <DigitalHumanHistory
+              history={digitalHumansHistory}
+              selectedHumanId={selectedDigitalHumanId}
+              loading={historyLoading}
+              generating={historyGenerating}
+              onSelect={handleSelectDigitalHuman}
+              onRegenerate={() => handleGenerateDigitalHumans(description, referenceImageUrl)}
+            />
           </div>
         </div>
+      </div>
 
       {/* 底部操作栏 - 可选显示 */}
       {!hideBottomActions && (

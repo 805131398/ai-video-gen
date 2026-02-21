@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 import fsSync from 'fs';
@@ -19,6 +19,7 @@ import {
   // 角色管理
   saveCharacter,
   getProjectCharacters,
+  getAllCharacters,
   deleteCharacter,
   // 数字人管理
   saveDigitalHuman,
@@ -50,6 +51,28 @@ import {
   getProviderUploadRecord,
   saveProviderUploadRecord,
   deleteProviderUploadRecord,
+  // AI 工具配置管理
+  saveAiToolConfig,
+  getAiToolConfigs,
+  getAiToolConfigsByType,
+  getDefaultAiToolConfig,
+  setDefaultAiToolConfig,
+  deleteAiToolConfig,
+  // 对话管理
+  saveChatConversation,
+  getChatConversations,
+  deleteChatConversation,
+  updateChatConversationTitle,
+  saveChatMessage,
+  getChatMessages,
+  deleteChatMessages,
+  // 使用日志管理
+  saveAiUsageLog,
+  getAiUsageLogs,
+  getUsageStatsSummary,
+  getDailyUsageStats,
+  deleteAiUsageLog,
+  clearAiUsageLogs,
 } from './database';
 import { downloadResource, deleteProjectResources } from './resources';
 
@@ -93,6 +116,8 @@ function createWindow() {
     trafficLightPosition: { x: 12, y: 14 }, // Center vertically in 40px title bar
   });
 
+  // 启动时最大化窗口
+  mainWindow.maximize();
 
   if (isDev) {
     // 开发模式：加载 Vite 开发服务器
@@ -112,6 +137,15 @@ function createWindow() {
 app.whenReady().then(() => {
   // 初始化数据库
   initDatabase();
+
+  // macOS: 设置 Dock 图标（开发模式下 Electron 默认使用自带图标）
+  if (process.platform === 'darwin') {
+    const dockIconPath = path.join(__dirname, '../build/icon.png');
+    if (fsSync.existsSync(dockIconPath)) {
+      const dockIcon = nativeImage.createFromPath(dockIconPath);
+      app.dock.setIcon(dockIcon);
+    }
+  }
 
   // 注册自定义协议处理器，用于加载本地资源文件
   protocol.handle('local-resource', (request) => {
@@ -187,6 +221,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle('db:getProjectCharacters', async (_, projectId: string) => {
     return getProjectCharacters(projectId);
+  });
+
+  ipcMain.handle('db:getAllCharacters', async () => {
+    return getAllCharacters();
   });
 
   ipcMain.handle('db:deleteCharacter', async (_, characterId: string) => {
@@ -274,6 +312,235 @@ function registerIpcHandlers() {
 
   ipcMain.handle('db:deleteProviderUploadRecord', async (_, localResourceHash: string, providerName: string) => {
     return deleteProviderUploadRecord(localResourceHash, providerName);
+  });
+
+  // AI 工具配置管理
+  ipcMain.handle('db:saveAiToolConfig', async (_, config: any) => {
+    return saveAiToolConfig(config);
+  });
+
+  ipcMain.handle('db:getAiToolConfigs', async () => {
+    return getAiToolConfigs();
+  });
+
+  ipcMain.handle('db:getAiToolConfigsByType', async (_, toolType: string) => {
+    return getAiToolConfigsByType(toolType);
+  });
+
+  ipcMain.handle('db:getDefaultAiToolConfig', async (_, toolType: string) => {
+    return getDefaultAiToolConfig(toolType);
+  });
+
+  ipcMain.handle('db:setDefaultAiToolConfig', async (_, toolType: string, configId: string) => {
+    return setDefaultAiToolConfig(toolType, configId);
+  });
+
+  ipcMain.handle('db:deleteAiToolConfig', async (_, configId: string) => {
+    return deleteAiToolConfig(configId);
+  });
+
+  // 对话管理
+  ipcMain.handle('db:saveChatConversation', async (_, conversation: any) => {
+    return saveChatConversation(conversation);
+  });
+
+  ipcMain.handle('db:getChatConversations', async () => {
+    return getChatConversations();
+  });
+
+  ipcMain.handle('db:deleteChatConversation', async (_, conversationId: string) => {
+    return deleteChatConversation(conversationId);
+  });
+
+  ipcMain.handle('db:updateChatConversationTitle', async (_, conversationId: string, title: string) => {
+    return updateChatConversationTitle(conversationId, title);
+  });
+
+  ipcMain.handle('db:saveChatMessage', async (_, message: any) => {
+    return saveChatMessage(message);
+  });
+
+  ipcMain.handle('db:getChatMessages', async (_, conversationId: string) => {
+    return getChatMessages(conversationId);
+  });
+
+  ipcMain.handle('db:deleteChatMessages', async (_, conversationId: string) => {
+    return deleteChatMessages(conversationId);
+  });
+
+  // 使用日志管理
+  ipcMain.handle('db:saveAiUsageLog', async (_, log: any) => {
+    return saveAiUsageLog(log);
+  });
+
+  ipcMain.handle('db:getAiUsageLogs', async (_, query: any) => {
+    return getAiUsageLogs(query);
+  });
+
+  ipcMain.handle('db:getUsageStatsSummary', async (_, query: any) => {
+    return getUsageStatsSummary(query);
+  });
+
+  ipcMain.handle('db:getDailyUsageStats', async (_, query: any) => {
+    return getDailyUsageStats(query);
+  });
+
+  ipcMain.handle('db:deleteAiUsageLog', async (_, logId: string) => {
+    return deleteAiUsageLog(logId);
+  });
+
+  ipcMain.handle('db:clearAiUsageLogs', async () => {
+    return clearAiUsageLogs();
+  });
+
+  // AI 对话流式调用
+  ipcMain.handle('chat:sendMessage', async (event, request: any) => {
+    const startTime = Date.now();
+    const logId = crypto.randomUUID();
+    const { baseUrl, apiKey, model, messages, temperature, maxTokens, conversationId, modelConfigId, toolType } = request;
+
+    let url = baseUrl.replace(/\/+$/, '');
+    // 去除已知路径后缀，避免重复拼接
+    const knownSuffixes = ['/chat/completions', '/completions', '/images/generations', '/embeddings', '/audio'];
+    for (const suffix of knownSuffixes) {
+      if (url.endsWith(suffix)) {
+        url = url.slice(0, -suffix.length);
+        break;
+      }
+    }
+    url = `${url}/chat/completions`;
+
+    const body: any = {
+      model,
+      messages,
+      stream: true,
+    };
+    if (temperature !== undefined) body.temperature = temperature;
+    if (maxTokens !== undefined) body.max_tokens = maxTokens;
+
+    // 用户输入摘要（取最后一条 user 消息）
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
+    const userInput = lastUserMsg?.content?.slice(0, 500) || '';
+
+    // 请求体快照（隐藏 apiKey）
+    const requestBodySnapshot = JSON.stringify({ url, model, messages, temperature, maxTokens });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const durationMs = Date.now() - startTime;
+        mainWindow?.webContents.send('chat:streamChunk', {
+          type: 'error',
+          error: `HTTP ${response.status}: ${errorText}`,
+        });
+        // 记录错误日志
+        saveAiUsageLog({
+          id: logId, toolType: toolType || 'text_chat', modelName: model,
+          modelConfigId: modelConfigId || null, status: 'error',
+          errorMessage: `HTTP ${response.status}: ${errorText.slice(0, 2000)}`,
+          durationMs, requestBody: requestBodySnapshot,
+          responseBody: errorText.slice(0, 5000),
+          userInput, baseUrl, temperature, maxTokens,
+          conversationId: conversationId || null,
+          createdAt: new Date().toISOString(),
+        });
+        return '';
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        mainWindow?.webContents.send('chat:streamChunk', { type: 'error', error: '无法读取响应流' });
+        saveAiUsageLog({
+          id: logId, toolType: toolType || 'text_chat', modelName: model,
+          modelConfigId: modelConfigId || null, status: 'error',
+          errorMessage: '无法读取响应流', durationMs: Date.now() - startTime,
+          requestBody: requestBodySnapshot, userInput, baseUrl, temperature, maxTokens,
+          conversationId: conversationId || null, createdAt: new Date().toISOString(),
+        });
+        return '';
+      }
+
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let buffer = '';
+      let usageInfo: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.delta?.content;
+            if (content) {
+              fullContent += content;
+              mainWindow?.webContents.send('chat:streamChunk', { type: 'delta', content });
+            }
+            // 提取 usage 信息（部分 API 在最后一个 chunk 返回）
+            if (json.usage) {
+              usageInfo = json.usage;
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+
+      const durationMs = Date.now() - startTime;
+      mainWindow?.webContents.send('chat:streamChunk', { type: 'done' });
+
+      // 记录成功日志
+      saveAiUsageLog({
+        id: logId, toolType: toolType || 'text_chat', modelName: model,
+        modelConfigId: modelConfigId || null, status: 'success',
+        durationMs,
+        promptTokens: usageInfo?.prompt_tokens || null,
+        completionTokens: usageInfo?.completion_tokens || null,
+        totalTokens: usageInfo?.total_tokens || null,
+        requestBody: requestBodySnapshot,
+        responseBody: fullContent.slice(0, 10000),
+        userInput, aiOutput: fullContent.slice(0, 500),
+        baseUrl, temperature, maxTokens,
+        conversationId: conversationId || null,
+        createdAt: new Date().toISOString(),
+      });
+
+      return fullContent;
+    } catch (error: any) {
+      const durationMs = Date.now() - startTime;
+      mainWindow?.webContents.send('chat:streamChunk', {
+        type: 'error',
+        error: error.message || '请求失败',
+      });
+      // 记录异常日志
+      saveAiUsageLog({
+        id: logId, toolType: toolType || 'text_chat', modelName: model,
+        modelConfigId: modelConfigId || null, status: 'error',
+        errorMessage: error.message || '请求失败', durationMs,
+        requestBody: requestBodySnapshot, userInput,
+        baseUrl, temperature, maxTokens,
+        conversationId: conversationId || null,
+        createdAt: new Date().toISOString(),
+      });
+      return '';
+    }
   });
 
   // 资源下载管理
@@ -374,7 +641,7 @@ function registerIpcHandlers() {
       let totalBytes = 0;
       let fileCount = 0;
 
-      async function calculateDir(dirPath: string) {
+      const calculateDir = async (dirPath: string) => {
         try {
           const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
@@ -413,7 +680,7 @@ function registerIpcHandlers() {
     try {
       let deletedCount = 0;
 
-      async function clearDir(dirPath: string) {
+      const clearDir = async (dirPath: string) => {
         try {
           const entries = await fs.readdir(dirPath, { withFileTypes: true });
 

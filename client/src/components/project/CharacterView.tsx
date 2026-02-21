@@ -18,7 +18,7 @@ export default function CharacterView({
       const isMainCharacter = scene.content.characterId === character.id;
 
       // 检查角色是否在其他角色列表中
-      const otherCharacterInfo = scene.content.otherCharacters?.find(
+      const otherCharacterInfo = scene.content.characters?.find(
         (c) => c.characterId === character.id
       );
 
@@ -27,11 +27,11 @@ export default function CharacterView({
 
       // 过滤该角色的台词（通过说话人名称匹配）
       const dialogues = scene.content.dialogues?.filter(
-        (d) => d.speaker === character.name
+        (d) => d.characterId === character.id
       ) || [];
 
       // 获取角色在场景中的角色描述
-      const role = isMainCharacter ? '主要角色' : otherCharacterInfo?.role || '其他角色';
+      const role = isMainCharacter ? '主要角色' : otherCharacterInfo?.action || '其他角色';
 
       return [{
         scene,
@@ -78,11 +78,10 @@ export default function CharacterView({
                       {scene.duration && (
                         <span className="text-xs text-slate-500">⏱ {scene.duration}s</span>
                       )}
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        isMainCharacter
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-200 text-slate-700'
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded ${isMainCharacter
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-slate-200 text-slate-700'
+                        }`}>
                         {role}
                       </span>
                     </div>

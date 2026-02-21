@@ -43,7 +43,7 @@ export default function PersonalInfo() {
             </div>
             <div className="flex-1">
               <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                {user?.name || user?.username || '未设置'}
+                {user?.username || '未设置'}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 用户 ID: {user?.id}
@@ -69,26 +69,9 @@ export default function PersonalInfo() {
               </div>
             )}
 
-            {user?.phone && (
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
-                  <Phone className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    手机号码
-                  </Label>
-                  <p className="text-sm text-slate-900 dark:text-white mt-1">
-                    {user.phone}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
-      </Card>
-
-      {/* 账户操作卡片 */}
+      </Card>      {/* 账户操作卡片 */}
       <Card className="border-slate-200 dark:border-slate-800 transition-all hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-xl">账户操作</CardTitle>
@@ -124,6 +107,6 @@ export default function PersonalInfo() {
           </AlertDialog>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

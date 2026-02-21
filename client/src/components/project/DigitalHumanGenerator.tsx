@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Check, Loader2, ZoomIn, Copy, CheckCheck } from 'lucide-react';
-import { getDigitalHumans } from '../../services/project';
+import { Sparkles, Loader2, ZoomIn, Copy, CheckCheck } from 'lucide-react';
+import { getDigitalHumans } from '../../services/character';
 import ImageWithFallback from '../ImageWithFallback';
 
 export interface DigitalHuman {
@@ -17,7 +17,6 @@ interface DigitalHumanGeneratorProps {
   characterDescription: string;
   referenceImageUrl?: string;
   selectedHumanId?: string;
-  projectId: string;
   onSelect: (humanId: string) => void;
   onGenerate: (description: string, referenceImage?: string, aspectRatio?: string, count?: number) => Promise<void>;
   onHistoryChange?: (history: DigitalHuman[], loading: boolean, generating: boolean) => void;
@@ -29,7 +28,6 @@ export default function DigitalHumanGenerator({
   characterDescription,
   referenceImageUrl,
   selectedHumanId,
-  projectId,
   onSelect,
   onGenerate,
   onHistoryChange,
@@ -47,13 +45,13 @@ export default function DigitalHumanGenerator({
   // 加载历史数字人
   useEffect(() => {
     const loadHistory = async () => {
-      if (!characterId || !projectId) {
+      if (!characterId) {
         setLoading(false);
         return;
       }
 
       try {
-        const digitalHumans = await getDigitalHumans(projectId, characterId);
+        const digitalHumans = await getDigitalHumans(characterId);
         // 按创建时间倒序排列（最新的在前）
         const sorted = digitalHumans.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -67,7 +65,7 @@ export default function DigitalHumanGenerator({
     };
 
     loadHistory();
-  }, [characterId, projectId]);
+  }, [characterId]);
 
   // 自动选择默认数字人：优先选择服务端标记为 isSelected 的，否则选择最新的
   useEffect(() => {
@@ -151,7 +149,7 @@ export default function DigitalHumanGenerator({
 
       // 生成完成后，如果有 characterId，重新加载完整的数字人列表
       if (characterId) {
-        const allDigitalHumans = await getDigitalHumans(projectId, characterId, true);
+        const allDigitalHumans = await getDigitalHumans(characterId, true);
 
         // 按创建时间倒序排列（最新的在前）
         const sorted = allDigitalHumans.sort((a, b) =>
@@ -249,11 +247,10 @@ export default function DigitalHumanGenerator({
             <button
               type="button"
               onClick={() => setAspectRatio('portrait')}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                aspectRatio === 'portrait'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${aspectRatio === 'portrait'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center gap-1">
                 <div className="w-8 h-12 border-2 border-current rounded"></div>
@@ -263,11 +260,10 @@ export default function DigitalHumanGenerator({
             <button
               type="button"
               onClick={() => setAspectRatio('landscape')}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                aspectRatio === 'landscape'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${aspectRatio === 'landscape'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center gap-1">
                 <div className="w-12 h-8 border-2 border-current rounded"></div>
@@ -286,11 +282,10 @@ export default function DigitalHumanGenerator({
             <button
               type="button"
               onClick={() => setGenerateCount(1)}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                generateCount === 1
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${generateCount === 1
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center gap-1">
                 <span className="text-2xl font-bold">1</span>
@@ -300,11 +295,10 @@ export default function DigitalHumanGenerator({
             <button
               type="button"
               onClick={() => setGenerateCount(4)}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                generateCount === 4
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${generateCount === 4
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center gap-1">
                 <span className="text-2xl font-bold">4</span>
@@ -314,11 +308,10 @@ export default function DigitalHumanGenerator({
             <button
               type="button"
               onClick={() => setGenerateCount(8)}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                generateCount === 8
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${generateCount === 8
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col items-center gap-1">
                 <span className="text-2xl font-bold">8</span>

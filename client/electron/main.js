@@ -78,6 +78,8 @@ function createWindow() {
         titleBarOverlay: false,
         trafficLightPosition: { x: 12, y: 14 }, // Center vertically in 40px title bar
     });
+    // 启动时最大化窗口
+    mainWindow.maximize();
     if (isDev) {
         // 开发模式：加载 Vite 开发服务器
         mainWindow.loadURL('http://localhost:5173');
@@ -95,6 +97,14 @@ function createWindow() {
 electron_1.app.whenReady().then(() => {
     // 初始化数据库
     (0, database_1.initDatabase)();
+    // macOS: 设置 Dock 图标（开发模式下 Electron 默认使用自带图标）
+    if (process.platform === 'darwin') {
+        const dockIconPath = path_1.default.join(__dirname, '../build/icon.png');
+        if (fs_1.default.existsSync(dockIconPath)) {
+            const dockIcon = electron_1.nativeImage.createFromPath(dockIconPath);
+            electron_1.app.dock.setIcon(dockIcon);
+        }
+    }
     // 注册自定义协议处理器，用于加载本地资源文件
     electron_1.protocol.handle('local-resource', (request) => {
         // URL 格式: local-resource:///path/to/file
@@ -155,6 +165,9 @@ function registerIpcHandlers() {
     });
     electron_1.ipcMain.handle('db:getProjectCharacters', async (_, projectId) => {
         return (0, database_1.getProjectCharacters)(projectId);
+    });
+    electron_1.ipcMain.handle('db:getAllCharacters', async () => {
+        return (0, database_1.getAllCharacters)();
     });
     electron_1.ipcMain.handle('db:deleteCharacter', async (_, characterId) => {
         return (0, database_1.deleteCharacter)(characterId);
@@ -222,6 +235,207 @@ function registerIpcHandlers() {
     });
     electron_1.ipcMain.handle('db:deleteProviderUploadRecord', async (_, localResourceHash, providerName) => {
         return (0, database_1.deleteProviderUploadRecord)(localResourceHash, providerName);
+    });
+    // AI 工具配置管理
+    electron_1.ipcMain.handle('db:saveAiToolConfig', async (_, config) => {
+        return (0, database_1.saveAiToolConfig)(config);
+    });
+    electron_1.ipcMain.handle('db:getAiToolConfigs', async () => {
+        return (0, database_1.getAiToolConfigs)();
+    });
+    electron_1.ipcMain.handle('db:getAiToolConfigsByType', async (_, toolType) => {
+        return (0, database_1.getAiToolConfigsByType)(toolType);
+    });
+    electron_1.ipcMain.handle('db:getDefaultAiToolConfig', async (_, toolType) => {
+        return (0, database_1.getDefaultAiToolConfig)(toolType);
+    });
+    electron_1.ipcMain.handle('db:setDefaultAiToolConfig', async (_, toolType, configId) => {
+        return (0, database_1.setDefaultAiToolConfig)(toolType, configId);
+    });
+    electron_1.ipcMain.handle('db:deleteAiToolConfig', async (_, configId) => {
+        return (0, database_1.deleteAiToolConfig)(configId);
+    });
+    // 对话管理
+    electron_1.ipcMain.handle('db:saveChatConversation', async (_, conversation) => {
+        return (0, database_1.saveChatConversation)(conversation);
+    });
+    electron_1.ipcMain.handle('db:getChatConversations', async () => {
+        return (0, database_1.getChatConversations)();
+    });
+    electron_1.ipcMain.handle('db:deleteChatConversation', async (_, conversationId) => {
+        return (0, database_1.deleteChatConversation)(conversationId);
+    });
+    electron_1.ipcMain.handle('db:updateChatConversationTitle', async (_, conversationId, title) => {
+        return (0, database_1.updateChatConversationTitle)(conversationId, title);
+    });
+    electron_1.ipcMain.handle('db:saveChatMessage', async (_, message) => {
+        return (0, database_1.saveChatMessage)(message);
+    });
+    electron_1.ipcMain.handle('db:getChatMessages', async (_, conversationId) => {
+        return (0, database_1.getChatMessages)(conversationId);
+    });
+    electron_1.ipcMain.handle('db:deleteChatMessages', async (_, conversationId) => {
+        return (0, database_1.deleteChatMessages)(conversationId);
+    });
+    // 使用日志管理
+    electron_1.ipcMain.handle('db:saveAiUsageLog', async (_, log) => {
+        return (0, database_1.saveAiUsageLog)(log);
+    });
+    electron_1.ipcMain.handle('db:getAiUsageLogs', async (_, query) => {
+        return (0, database_1.getAiUsageLogs)(query);
+    });
+    electron_1.ipcMain.handle('db:getUsageStatsSummary', async (_, query) => {
+        return (0, database_1.getUsageStatsSummary)(query);
+    });
+    electron_1.ipcMain.handle('db:getDailyUsageStats', async (_, query) => {
+        return (0, database_1.getDailyUsageStats)(query);
+    });
+    electron_1.ipcMain.handle('db:deleteAiUsageLog', async (_, logId) => {
+        return (0, database_1.deleteAiUsageLog)(logId);
+    });
+    electron_1.ipcMain.handle('db:clearAiUsageLogs', async () => {
+        return (0, database_1.clearAiUsageLogs)();
+    });
+    // AI 对话流式调用
+    electron_1.ipcMain.handle('chat:sendMessage', async (event, request) => {
+        const startTime = Date.now();
+        const logId = crypto_1.default.randomUUID();
+        const { baseUrl, apiKey, model, messages, temperature, maxTokens, conversationId, modelConfigId, toolType } = request;
+        let url = baseUrl.replace(/\/+$/, '');
+        // 去除已知路径后缀，避免重复拼接
+        const knownSuffixes = ['/chat/completions', '/completions', '/images/generations', '/embeddings', '/audio'];
+        for (const suffix of knownSuffixes) {
+            if (url.endsWith(suffix)) {
+                url = url.slice(0, -suffix.length);
+                break;
+            }
+        }
+        url = `${url}/chat/completions`;
+        const body = {
+            model,
+            messages,
+            stream: true,
+        };
+        if (temperature !== undefined)
+            body.temperature = temperature;
+        if (maxTokens !== undefined)
+            body.max_tokens = maxTokens;
+        // 用户输入摘要（取最后一条 user 消息）
+        const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+        const userInput = lastUserMsg?.content?.slice(0, 500) || '';
+        // 请求体快照（隐藏 apiKey）
+        const requestBodySnapshot = JSON.stringify({ url, model, messages, temperature, maxTokens });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                const durationMs = Date.now() - startTime;
+                mainWindow?.webContents.send('chat:streamChunk', {
+                    type: 'error',
+                    error: `HTTP ${response.status}: ${errorText}`,
+                });
+                // 记录错误日志
+                (0, database_1.saveAiUsageLog)({
+                    id: logId, toolType: toolType || 'text_chat', modelName: model,
+                    modelConfigId: modelConfigId || null, status: 'error',
+                    errorMessage: `HTTP ${response.status}: ${errorText.slice(0, 2000)}`,
+                    durationMs, requestBody: requestBodySnapshot,
+                    responseBody: errorText.slice(0, 5000),
+                    userInput, baseUrl, temperature, maxTokens,
+                    conversationId: conversationId || null,
+                    createdAt: new Date().toISOString(),
+                });
+                return '';
+            }
+            const reader = response.body?.getReader();
+            if (!reader) {
+                mainWindow?.webContents.send('chat:streamChunk', { type: 'error', error: '无法读取响应流' });
+                (0, database_1.saveAiUsageLog)({
+                    id: logId, toolType: toolType || 'text_chat', modelName: model,
+                    modelConfigId: modelConfigId || null, status: 'error',
+                    errorMessage: '无法读取响应流', durationMs: Date.now() - startTime,
+                    requestBody: requestBodySnapshot, userInput, baseUrl, temperature, maxTokens,
+                    conversationId: conversationId || null, createdAt: new Date().toISOString(),
+                });
+                return '';
+            }
+            const decoder = new TextDecoder();
+            let fullContent = '';
+            let buffer = '';
+            let usageInfo = null;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done)
+                    break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data:'))
+                        continue;
+                    const data = trimmed.slice(5).trim();
+                    if (data === '[DONE]')
+                        continue;
+                    try {
+                        const json = JSON.parse(data);
+                        const content = json.choices?.[0]?.delta?.content;
+                        if (content) {
+                            fullContent += content;
+                            mainWindow?.webContents.send('chat:streamChunk', { type: 'delta', content });
+                        }
+                        // 提取 usage 信息（部分 API 在最后一个 chunk 返回）
+                        if (json.usage) {
+                            usageInfo = json.usage;
+                        }
+                    }
+                    catch { /* ignore parse errors */ }
+                }
+            }
+            const durationMs = Date.now() - startTime;
+            mainWindow?.webContents.send('chat:streamChunk', { type: 'done' });
+            // 记录成功日志
+            (0, database_1.saveAiUsageLog)({
+                id: logId, toolType: toolType || 'text_chat', modelName: model,
+                modelConfigId: modelConfigId || null, status: 'success',
+                durationMs,
+                promptTokens: usageInfo?.prompt_tokens || null,
+                completionTokens: usageInfo?.completion_tokens || null,
+                totalTokens: usageInfo?.total_tokens || null,
+                requestBody: requestBodySnapshot,
+                responseBody: fullContent.slice(0, 10000),
+                userInput, aiOutput: fullContent.slice(0, 500),
+                baseUrl, temperature, maxTokens,
+                conversationId: conversationId || null,
+                createdAt: new Date().toISOString(),
+            });
+            return fullContent;
+        }
+        catch (error) {
+            const durationMs = Date.now() - startTime;
+            mainWindow?.webContents.send('chat:streamChunk', {
+                type: 'error',
+                error: error.message || '请求失败',
+            });
+            // 记录异常日志
+            (0, database_1.saveAiUsageLog)({
+                id: logId, toolType: toolType || 'text_chat', modelName: model,
+                modelConfigId: modelConfigId || null, status: 'error',
+                errorMessage: error.message || '请求失败', durationMs,
+                requestBody: requestBodySnapshot, userInput,
+                baseUrl, temperature, maxTokens,
+                conversationId: conversationId || null,
+                createdAt: new Date().toISOString(),
+            });
+            return '';
+        }
     });
     // 资源下载管理
     electron_1.ipcMain.handle('resources:download', async (_, params) => {
@@ -305,7 +519,7 @@ function registerIpcHandlers() {
         try {
             let totalBytes = 0;
             let fileCount = 0;
-            async function calculateDir(dirPath) {
+            const calculateDir = async (dirPath) => {
                 try {
                     const entries = await promises_1.default.readdir(dirPath, { withFileTypes: true });
                     for (const entry of entries) {
@@ -330,7 +544,7 @@ function registerIpcHandlers() {
                     // 目录不存在或无权限
                     console.warn(`Cannot read directory: ${dirPath}`, err);
                 }
-            }
+            };
             await calculateDir(folderPath);
             return { bytes: totalBytes, count: fileCount };
         }
@@ -343,7 +557,7 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle('storage:clearCache', async (_, folderPath) => {
         try {
             let deletedCount = 0;
-            async function clearDir(dirPath) {
+            const clearDir = async (dirPath) => {
                 try {
                     const entries = await promises_1.default.readdir(dirPath, { withFileTypes: true });
                     for (const entry of entries) {
@@ -367,7 +581,7 @@ function registerIpcHandlers() {
                 catch (err) {
                     console.warn(`Cannot clear directory: ${dirPath}`, err);
                 }
-            }
+            };
             await clearDir(folderPath);
             return { success: true, deletedCount };
         }

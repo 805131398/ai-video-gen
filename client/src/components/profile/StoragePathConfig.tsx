@@ -5,11 +5,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FolderOpen } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { showToast } from '@/components/ui/mini-toast';
 
 export default function StoragePathConfig() {
   const { storageConfig, updateStoragePath, isLoading } = useSettingsStore();
-  const { toast } = useToast();
   const [localPathType, setLocalPathType] = useState(storageConfig.pathType);
   const [localCustomPath, setLocalCustomPath] = useState(storageConfig.customPath);
 
@@ -21,28 +20,17 @@ export default function StoragePathConfig() {
       }
     } catch (error) {
       console.error('Select folder error:', error);
-      toast({
-        title: '选择文件夹失败',
-        description: '无法打开文件夹选择对话框',
-        variant: 'destructive',
-      });
+      showToast('选择文件夹失败', 'error');
     }
   };
 
   const handleSave = async () => {
     try {
       await updateStoragePath(localPathType, localCustomPath);
-      toast({
-        title: '保存成功',
-        description: '存储路径配置已更新',
-      });
+      showToast('存储路径配置已更新');
     } catch (error) {
       console.error('Save path error:', error);
-      toast({
-        title: '保存失败',
-        description: '无法保存存储路径配置',
-        variant: 'destructive',
-      });
+      showToast('无法保存存储路径配置', 'error');
     }
   };
 

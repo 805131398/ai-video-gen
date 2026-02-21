@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import { getProject, getProjectCharacters, updateCharacter, generateDigitalHumans, selectDigitalHuman, getDigitalHumans } from '../services/project';
+import { getProject } from '../services/project';
+import { getCharacter, updateCharacter, generateDigitalHumans, selectDigitalHuman } from '../services/character';
 import { Project, ProjectCharacter, CreateCharacterRequest } from '../types';
-import { useToast } from '../hooks/use-toast';
+import { showToast } from '../components/ui/mini-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import DigitalHumanGenerator, { DigitalHuman } from '../components/project/DigitalHumanGenerator';
 import DigitalHumanHistory from '../components/project/DigitalHumanHistory';
@@ -11,7 +12,6 @@ import DigitalHumanHistory from '../components/project/DigitalHumanHistory';
 export default function CharacterEdit() {
   const { id: projectId, characterId } = useParams<{ id: string; characterId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   // 数据状态
   const [project, setProject] = useState<Project | null>(null);
@@ -34,28 +34,24 @@ export default function CharacterEdit() {
   const [selectedDigitalHumanId, setSelectedDigitalHumanId] = useState<string | undefined>();
   const [historyLoading, setHistoryLoading] = useState(false);
   const [digitalHumanGenerating, setDigitalHumanGenerating] = useState(false);
+  const [generatorKey, setGeneratorKey] = useState(0);
 
   // 加载数据
   useEffect(() => {
     const loadData = async () => {
-      if (!projectId || !characterId) return;
+      if (!characterId) return;
 
       try {
-        const [p, characters] = await Promise.all([
-          getProject(projectId),
-          getProjectCharacters(projectId),
-        ]);
+        let p = null;
+        if (projectId) {
+          p = await getProject(projectId);
+          setProject(p);
+        }
 
-        setProject(p);
-
-        const char = characters.find(c => c.id === characterId);
+        const char = await getCharacter(characterId);
         if (!char) {
-          toast({
-            title: '角色不存在',
-            description: '未找到该角色',
-            variant: 'destructive',
-          });
-          navigate(`/projects/${projectId}`);
+          showToast('未找到该角色', 'error');
+          navigate(projectId ? `/projects/${projectId}` : '/characters');
           return;
         }
 
@@ -66,15 +62,10 @@ export default function CharacterEdit() {
         setAttributes((char.attributes as Record<string, any>) || {});
         setSelectedDigitalHumanId(char.attributes?.digitalHumanId as string | undefined);
 
-        // 加载数字人历史
-        loadDigitalHumansHistory();
+        // 数字人历史由 DigitalHumanGenerator 组件自行加载
       } catch (err: any) {
         setError(err.response?.data?.error || '加载失败');
-        toast({
-          title: '加载失败',
-          description: err.response?.data?.error || '请重试',
-          variant: 'destructive',
-        });
+        showToast(err.response?.data?.error || '加载失败', 'error');
       } finally {
         setLoading(false);
       }
@@ -93,24 +84,28 @@ export default function CharacterEdit() {
     }
   }, []);
 
-  // 加载数字人历史
-  const loadDigitalHumansHistory = async () => {
-    if (!projectId || !characterId) return;
+  // 数字人历史变化回调 - 用 useCallback 包裹防止无限渲染
+  const handleHistoryChange = useCallback(
+    (history: DigitalHuman[], loading: boolean, generating: boolean) => {
+      setDigitalHumansHistory(history);
+      setHistoryLoading(loading);
+      setDigitalHumanGenerating(generating);
+    },
+    [] // 无依赖，只在挂载时创建一次
+  );
 
-    setHistoryLoading(true);
-    try {
-      const digitalHumans = await getDigitalHumans(projectId, characterId);
-      setDigitalHumansHistory(digitalHumans);
-    } catch (err) {
-      console.error('加载数字人历史失败:', err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  // 供外部重新加载数字人历史（由 DigitalHumanHistory 刷新按钮触发）
+  const handleReloadHistory = useCallback(() => {
+    // 递增 key 强制 DigitalHumanGenerator 重新 mount，触发其内部 loadHistory
+    setGeneratorKey(k => k + 1);
+  }, []);
 
   const handleBack = () => {
-    if (!projectId) return;
-    navigate(`/projects/${projectId}`);
+    if (projectId) {
+      navigate(`/projects/${projectId}`);
+    } else {
+      navigate('/characters');
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -119,7 +114,7 @@ export default function CharacterEdit() {
   };
 
   const handleSave = async (returnToList: boolean) => {
-    if (!projectId || !characterId) return;
+    if (!characterId) return;
     if (!name.trim() || !description.trim()) {
       setError('请填写必填字段');
       return;
@@ -142,98 +137,53 @@ export default function CharacterEdit() {
         sortOrder: character?.sortOrder || 0,
       };
 
-      await updateCharacter(projectId, characterId, data);
+      await updateCharacter(characterId, data);
 
-      toast({
-        title: '保存成功',
-        description: '角色信息已更新',
-      });
+      showToast('角色信息已更新');
 
       if (returnToList) {
-        navigate(`/projects/${projectId}`);
+        navigate(projectId ? `/projects/${projectId}` : '/characters');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || '保存失败，请重试');
-      toast({
-        title: '保存失败',
-        description: err.response?.data?.message || '请重试',
-        variant: 'destructive',
-      });
+      showToast(err.response?.data?.message || '保存失败，请重试', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleGenerateDigitalHumans = async (
-    desc: string,
-    refImage?: string,
+    _desc: string,
+    _refImage?: string,
     aspectRatio?: string,
     count?: number
   ): Promise<void> => {
-    if (!projectId || !characterId) return;
-
-    try {
-      await generateDigitalHumans(projectId, characterId, count || 1, aspectRatio);
-
-      // 轮询查询结果
-      const beforeCount = digitalHumansHistory.length;
-      const expectedCount = count || 1;
-      let attempts = 0;
-      const maxAttempts = 60;
-
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        try {
-          const digitalHumans = await getDigitalHumans(projectId, characterId, true);
-          const newCount = digitalHumans.length - beforeCount;
-
-          if (newCount >= expectedCount) {
-            await loadDigitalHumansHistory();
-            return;
-          }
-        } catch (error) {
-          console.error('查询数字人失败:', error);
-        }
-
-        attempts++;
-      }
-
-      throw new Error('生成超时，请刷新页面查看结果');
-    } catch (error) {
-      console.error('生成数字人失败:', error);
-      throw error;
-    }
+    if (!characterId) return;
+    // 直接触发生成 API，DigitalHumanGenerator 自己负责轮询和展示结果
+    await generateDigitalHumans(characterId, count || 1, aspectRatio);
   };
 
   const handleSelectDigitalHuman = async (humanId: string) => {
-    if (!projectId || !characterId) return;
+    if (!characterId) return;
 
     try {
-      await selectDigitalHuman(projectId, characterId, humanId);
+      await selectDigitalHuman(characterId, humanId);
       setSelectedDigitalHumanId(humanId);
 
       // 同时更新角色 attributes 中的 digitalHumanId，确保重新打开时能恢复选择
       const updatedAttributes = { ...attributes, digitalHumanId: humanId };
       setAttributes(updatedAttributes);
-      await updateCharacter(projectId, characterId, {
+      await updateCharacter(characterId, {
         name,
         description,
         avatarUrl: avatarUrl || undefined,
         attributes: updatedAttributes,
       });
 
-      toast({
-        title: '选择成功',
-        description: '数字人已设置为当前角色',
-      });
+      showToast('数字人已设置为当前角色');
     } catch (err: any) {
       console.error('选择数字人失败:', err);
-      toast({
-        title: '选择失败',
-        description: err.response?.data?.error || '请重试',
-        variant: 'destructive',
-      });
+      showToast(err.response?.data?.error || '选择失败，请重试', 'error');
     }
   };
 
@@ -264,18 +214,22 @@ export default function CharacterEdit() {
             </button>
             <div className="ml-4 text-sm text-gray-500 flex items-center gap-1">
               <button
-                onClick={() => navigate(`/projects/${projectId}`)}
+                onClick={() => navigate(projectId ? `/projects/${projectId}` : '/characters')}
                 className="hover:text-gray-900 cursor-pointer transition-colors"
               >
-                {project?.title || project?.topic}
+                {projectId ? (project?.title || project?.topic) : '返回列表'}
               </button>
-              <span>&gt;</span>
-              <button
-                onClick={() => navigate(`/projects/${projectId}`)}
-                className="hover:text-gray-900 cursor-pointer transition-colors"
-              >
-                角色管理
-              </button>
+              {projectId && (
+                <>
+                  <span>&gt;</span>
+                  <button
+                    onClick={() => navigate(`/projects/${projectId}`)}
+                    className="hover:text-gray-900 cursor-pointer transition-colors"
+                  >
+                    角色管理
+                  </button>
+                </>
+              )}
               <span>&gt;</span>
               <span className="text-gray-900">编辑角色</span>
             </div>
@@ -380,7 +334,7 @@ export default function CharacterEdit() {
               {/* 左侧：数字人生成器 */}
               <div>
                 <DigitalHumanGenerator
-                  projectId={projectId!}
+                  key={generatorKey}
                   characterId={characterId!}
                   characterName={name}
                   characterDescription={description}
@@ -388,11 +342,7 @@ export default function CharacterEdit() {
                   onGenerate={handleGenerateDigitalHumans}
                   onSelect={handleSelectDigitalHuman}
                   selectedHumanId={selectedDigitalHumanId}
-                  onHistoryChange={(history, loading, generating) => {
-                    setDigitalHumansHistory(history);
-                    setHistoryLoading(loading);
-                    setDigitalHumanGenerating(generating);
-                  }}
+                  onHistoryChange={handleHistoryChange}
                 />
               </div>
 
@@ -404,7 +354,7 @@ export default function CharacterEdit() {
                   onSelect={handleSelectDigitalHuman}
                   loading={historyLoading}
                   generating={digitalHumanGenerating}
-                  onRegenerate={() => loadDigitalHumansHistory()}
+                  onRegenerate={handleReloadHistory}
                 />
               </div>
             </div>

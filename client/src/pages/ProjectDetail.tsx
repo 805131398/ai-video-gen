@@ -115,7 +115,9 @@ export default function ProjectDetail() {
     try {
       // 为第一个选中的角色创建剧本并跳转
       const firstCharacterId = Array.from(selectedCharacterIds)[0];
-      const script = await createScript(id, { characterId: firstCharacterId });
+      const firstCharacter = project?.characters?.find((c) => c.id === firstCharacterId);
+      const name = firstCharacter ? `${firstCharacter.name}的剧本` : '新剧本';
+      const script = await createScript(id, { name, characterIds: [firstCharacterId] });
       navigate(`/projects/${id}/script/${script.id}`);
     } catch (err: any) {
       setError(err.response?.data?.error || '创建剧本失败');

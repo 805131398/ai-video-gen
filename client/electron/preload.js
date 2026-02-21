@@ -17,6 +17,7 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         // 角色管理
         saveCharacter: (character) => electron_1.ipcRenderer.invoke('db:saveCharacter', character),
         getProjectCharacters: (projectId) => electron_1.ipcRenderer.invoke('db:getProjectCharacters', projectId),
+        getAllCharacters: () => electron_1.ipcRenderer.invoke('db:getAllCharacters'),
         deleteCharacter: (characterId) => electron_1.ipcRenderer.invoke('db:deleteCharacter', characterId),
         // 数字人管理
         saveDigitalHuman: (digitalHuman) => electron_1.ipcRenderer.invoke('db:saveDigitalHuman', digitalHuman),
@@ -44,6 +45,29 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         getProviderUploadRecord: (localResourceHash, providerName) => electron_1.ipcRenderer.invoke('db:getProviderUploadRecord', localResourceHash, providerName),
         saveProviderUploadRecord: (record) => electron_1.ipcRenderer.invoke('db:saveProviderUploadRecord', record),
         deleteProviderUploadRecord: (localResourceHash, providerName) => electron_1.ipcRenderer.invoke('db:deleteProviderUploadRecord', localResourceHash, providerName),
+        // AI 工具配置管理
+        saveAiToolConfig: (config) => electron_1.ipcRenderer.invoke('db:saveAiToolConfig', config),
+        getAiToolConfigs: () => electron_1.ipcRenderer.invoke('db:getAiToolConfigs'),
+        getAiToolConfigsByType: (toolType) => electron_1.ipcRenderer.invoke('db:getAiToolConfigsByType', toolType),
+        getDefaultAiToolConfig: (toolType) => electron_1.ipcRenderer.invoke('db:getDefaultAiToolConfig', toolType),
+        setDefaultAiToolConfig: (toolType, configId) => electron_1.ipcRenderer.invoke('db:setDefaultAiToolConfig', toolType, configId),
+        deleteAiToolConfig: (configId) => electron_1.ipcRenderer.invoke('db:deleteAiToolConfig', configId),
+        // 对话管理
+        saveChatConversation: (conversation) => electron_1.ipcRenderer.invoke('db:saveChatConversation', conversation),
+        getChatConversations: () => electron_1.ipcRenderer.invoke('db:getChatConversations'),
+        deleteChatConversation: (conversationId) => electron_1.ipcRenderer.invoke('db:deleteChatConversation', conversationId),
+        updateChatConversationTitle: (conversationId, title) => electron_1.ipcRenderer.invoke('db:updateChatConversationTitle', conversationId, title),
+        // 对话消息管理
+        saveChatMessage: (message) => electron_1.ipcRenderer.invoke('db:saveChatMessage', message),
+        getChatMessages: (conversationId) => electron_1.ipcRenderer.invoke('db:getChatMessages', conversationId),
+        deleteChatMessages: (conversationId) => electron_1.ipcRenderer.invoke('db:deleteChatMessages', conversationId),
+        // 使用日志管理
+        saveAiUsageLog: (log) => electron_1.ipcRenderer.invoke('db:saveAiUsageLog', log),
+        getAiUsageLogs: (query) => electron_1.ipcRenderer.invoke('db:getAiUsageLogs', query),
+        getUsageStatsSummary: (query) => electron_1.ipcRenderer.invoke('db:getUsageStatsSummary', query),
+        getDailyUsageStats: (query) => electron_1.ipcRenderer.invoke('db:getDailyUsageStats', query),
+        deleteAiUsageLog: (logId) => electron_1.ipcRenderer.invoke('db:deleteAiUsageLog', logId),
+        clearAiUsageLogs: () => electron_1.ipcRenderer.invoke('db:clearAiUsageLogs'),
     },
     // 资源管理
     resources: {
@@ -71,5 +95,14 @@ electron_1.contextBridge.exposeInMainWorld('electron', {
         minimize: () => electron_1.ipcRenderer.send('app:minimize'),
         maximize: () => electron_1.ipcRenderer.send('app:maximize'),
         close: () => electron_1.ipcRenderer.send('app:close'),
+    },
+    // AI 对话
+    chat: {
+        sendMessage: (request) => electron_1.ipcRenderer.invoke('chat:sendMessage', request),
+        onStreamChunk: (callback) => {
+            const handler = (_, chunk) => callback(chunk);
+            electron_1.ipcRenderer.on('chat:streamChunk', handler);
+            return () => electron_1.ipcRenderer.removeListener('chat:streamChunk', handler);
+        },
     },
 });

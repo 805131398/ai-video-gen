@@ -61,22 +61,15 @@ export default function ScriptEditor() {
     if (!id) return;
     try {
       setLoading(true);
-      const [projectData, charactersData] = await Promise.all([
-        getProject(id),
-        getProjectCharacters(id),
-      ]);
-      setProject(projectData);
-      setCharacters(charactersData);
-
-      // 如果是编辑模式，加载剧本数据
+      const charactersData = await getProjectCharacters(id);
+      setCharacters(charactersData);  // 如果是编辑模式，加载剧本数据
       if (scriptId) {
         const scriptData = await getScript(id, scriptId);
         setFormData({
           name: scriptData.name || scriptData.title || '',
           tone: scriptData.tone || '',
           synopsis: scriptData.synopsis || scriptData.description || '',
-          characterIds: scriptData.scriptCharacters?.map((sc: any) => sc.characterId) ||
-            (scriptData.characterId ? [scriptData.characterId] : []),
+          characterIds: scriptData.characterIds || (scriptData.characterId ? [scriptData.characterId] : []),
           scenes: scriptData.scenes || [],
         });
       }
@@ -196,7 +189,7 @@ export default function ScriptEditor() {
       if (formData.scenes.length > 0 && savedScriptId) {
         for (const scene of formData.scenes) {
           if (!scene.id) {
-            await createScene(id!, savedScriptId, scene);
+            await createScene(id!, savedScriptId, { ...scene, duration: scene.duration ?? undefined } as any);
           }
         }
       }
@@ -236,7 +229,7 @@ export default function ScriptEditor() {
       const result = await generateScriptVideos(id!, scriptId, {
         promptType: 'smart_combine', // 默认使用智能组合方式
         mode: useStoryboard ? 'storyboard' : 'individual', // 根据用户选择的模式
-      });
+      } as any);
 
       // 显示成功消息
       const modeText = useStoryboard ? '故事板模式' : '单独生成模式';
@@ -482,7 +475,7 @@ export default function ScriptEditor() {
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-slate-900 mb-2">{scene.title}</h4>
                       <p className="text-sm text-slate-600 line-clamp-2">
-                        {scene.content.dialogue || scene.content.action || '暂无描述'}
+                        {scene.content.dialogues?.[0]?.text || scene.content.actions?.main || scene.content.description || '暂无描述'}
                       </p>
                       {scene.duration && (
                         <p className="text-xs text-slate-500 mt-2">时长: {scene.duration}秒</p>

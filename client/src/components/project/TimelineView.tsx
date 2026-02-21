@@ -557,8 +557,8 @@ export default function TimelineView({ scenes, videoStatuses, onEditScene }: Tim
                     <span>
                       {duration}s
                     </span>
-                    {scene.content.otherCharacters && scene.content.otherCharacters.length > 0 && (
-                      <span>{scene.content.otherCharacters.length + 1} 个角色</span>
+                    {scene.content.characters && scene.content.characters.length > 0 && (
+                      <span>{scene.content.characters.length + 1} 个角色</span>
                     )}
                     {scene.content.dialogues && scene.content.dialogues.length > 0 && (
                       <span>{scene.content.dialogues.length} 条台词</span>

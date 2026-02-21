@@ -62,7 +62,7 @@ export default function SubscriptionManagement() {
     }
   };
 
-  const formatDate = (dateString: string | undefined) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '未知';
     return new Intl.DateTimeFormat('zh-CN', {
       year: 'numeric',
@@ -71,7 +71,7 @@ export default function SubscriptionManagement() {
     }).format(new Date(dateString));
   };
 
-  const getSubscriptionTypeLabel = (type: string | undefined) => {
+  const getSubscriptionTypeLabel = (type: string | null | undefined) => {
     switch (type) {
       case 'monthly':
         return '月卡';
@@ -97,11 +97,10 @@ export default function SubscriptionManagement() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                subscription?.is_active
-                  ? 'bg-green-100 dark:bg-green-900/30'
-                  : 'bg-red-100 dark:bg-red-900/30'
-              }`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${subscription?.is_active
+                ? 'bg-green-100 dark:bg-green-900/30'
+                : 'bg-red-100 dark:bg-red-900/30'
+                }`}>
                 {subscription?.is_active ? (
                   <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
                 ) : (

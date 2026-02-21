@@ -26,21 +26,28 @@ function getResourcesRoot(): string {
 
 // 确保资源目录存在
 export function ensureResourceDirectory(
-  projectId: string,
+  projectId: string | undefined,
   resourceType: string,
   characterId?: string,
-  sceneId?: string
+  sceneId?: string,
+  conversationId?: string
 ): string {
   const root = getResourcesRoot();
-  let dir = path.join(root, 'projects', projectId);
+  let dir: string;
 
-  if (resourceType === 'character_avatar' || resourceType === 'digital_human') {
-    dir = path.join(dir, 'characters', characterId!);
-    if (resourceType === 'digital_human') {
-      dir = path.join(dir, 'digital-humans');
+  if (resourceType === 'chat_resource') {
+    dir = path.join(root, 'chat-resources', conversationId || 'unknown');
+  } else {
+    dir = projectId ? path.join(root, 'projects', projectId) : path.join(root, 'global');
+
+    if (resourceType === 'character_avatar' || resourceType === 'digital_human') {
+      dir = path.join(dir, 'characters', characterId!);
+      if (resourceType === 'digital_human') {
+        dir = path.join(dir, 'digital-humans');
+      }
+    } else if (resourceType === 'scene_video' || resourceType === 'video_thumbnail') {
+      dir = path.join(dir, 'scenes', sceneId!);
     }
-  } else if (resourceType === 'scene_video' || resourceType === 'video_thumbnail') {
-    dir = path.join(dir, 'scenes', sceneId!);
   }
 
   if (!fs.existsSync(dir)) {
@@ -52,14 +59,15 @@ export function ensureResourceDirectory(
 
 // 获取资源本地路径
 export function getResourcePath(
-  projectId: string,
+  projectId: string | undefined,
   resourceType: string,
   resourceId: string,
   characterId?: string,
   sceneId?: string,
-  ext?: string
+  ext?: string,
+  conversationId?: string
 ): string {
-  const dir = ensureResourceDirectory(projectId, resourceType, characterId, sceneId);
+  const dir = ensureResourceDirectory(projectId, resourceType, characterId, sceneId, conversationId);
 
   let filename: string;
   if (resourceType === 'character_avatar') {
@@ -70,6 +78,8 @@ export function getResourcePath(
     filename = `video${ext}`;
   } else if (resourceType === 'video_thumbnail') {
     filename = `thumbnail${ext}`;
+  } else if (resourceType === 'chat_resource') {
+    filename = `${resourceId}${ext}`;
   } else {
     filename = `${resourceId}${ext}`;
   }
@@ -91,14 +101,23 @@ function getExtensionFromUrl(url: string): string {
 
 // 下载资源文件
 export async function downloadResource(params: any): Promise<any> {
-  const { url, resourceType, resourceId, projectId, characterId, sceneId } = params;
+  const { url, resourceType, resourceId, projectId, characterId, sceneId, conversationId, customSavePath } = params;
 
   try {
     // 获取文件扩展名
     const ext = getExtensionFromUrl(url);
 
     // 确定本地路径
-    const localPath = getResourcePath(projectId, resourceType, resourceId, characterId, sceneId, ext);
+    let localPath: string;
+    if (customSavePath) {
+      // 另存为：使用用户指定的目录
+      if (!fs.existsSync(customSavePath)) {
+        fs.mkdirSync(customSavePath, { recursive: true });
+      }
+      localPath = path.join(customSavePath, `${resourceId}${ext}`);
+    } else {
+      localPath = getResourcePath(projectId, resourceType, resourceId, characterId, sceneId, ext, conversationId);
+    }
 
     // 检查是否已有下载记录
     const existingDownload = getResourceDownload(resourceType, resourceId);

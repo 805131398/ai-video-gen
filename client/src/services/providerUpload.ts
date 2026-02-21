@@ -211,7 +211,7 @@ async function uploadImageToProvider(
 ): Promise<string> {
   // 获取用户 ID 用于解密
   const user = await window.electron.db.getUser();
-  if (!user?.user_id) {
+  if (!user?.id) {
     throw new Error('未登录，无法解密上传凭证');
   }
 
@@ -220,7 +220,7 @@ async function uploadImageToProvider(
     credential.encryptedApiKey,
     credential.iv,
     credential.authTag,
-    user.user_id
+    user.id
   );
 
   // 构建 FormData

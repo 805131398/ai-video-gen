@@ -108,7 +108,7 @@ export default function VideoDetailDrawer({
 
   if (!isOpen || !video) return null;
 
-  const hasCharacterInfo = metadata.useCharacterImage && (metadata.characterName || metadata.referenceImage);
+  const hasCharacterInfo = !!(metadata?.useCharacterImage && (metadata?.characterName || metadata?.referenceImage));
 
   return (
     <>
@@ -135,7 +135,7 @@ export default function VideoDetailDrawer({
         <div className="p-6 space-y-6">
           {/* 视频播放器 */}
           <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden">
-            {video.videoUrl && video.status === 'completed' ? (
+            {!!video.videoUrl && video.status === 'completed' ? (
               <>
                 <video
                   ref={videoRef}
@@ -183,14 +183,14 @@ export default function VideoDetailDrawer({
                   </div>
                 )}
                 <div className="space-y-1.5 text-sm min-w-0">
-                  {metadata.characterName && (
+                  {!!metadata.characterName && (
                     <div className="flex items-center gap-2">
                       <span className="text-purple-600 font-medium">
                         {metadata.characterName as string}
                       </span>
                     </div>
                   )}
-                  {metadata.imageSource && (
+                  {!!metadata.imageSource && (
                     <div className="text-purple-500 text-xs">
                       来源: {getImageSourceLabel(metadata.imageSource as string)}
                     </div>

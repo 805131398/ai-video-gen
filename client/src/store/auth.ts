@@ -18,9 +18,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, isAuthenticated: true, subscription });
     // 保存用户信息到本地数据库（转换字段名以匹配 Electron 数据库）
     window.electron?.db.saveUser({
-      user_id: user.id,
-      username: user.name || user.email || user.phone || '',
+      id: user.id,
+      username: user.username || user.email || '',
       email: user.email || '',
+      created_at: user.created_at || new Date().toISOString()
     });
   },
   logout: () => {

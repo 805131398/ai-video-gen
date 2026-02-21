@@ -540,7 +540,7 @@ export default function SceneEditorForm({
           <label className="block text-sm font-medium text-slate-700 mb-1">特效</label>
           <input
             type="text"
-            value={formData.content?.visual?.effects?.join(', ') || ''}
+            value={Array.isArray(formData.content?.visual?.effects) ? formData.content?.visual?.effects.join(', ') : (formData.content?.visual?.effects || '')}
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -611,7 +611,7 @@ export default function SceneEditorForm({
           <label className="block text-sm font-medium text-slate-700 mb-1">音效</label>
           <input
             type="text"
-            value={formData.content?.audio?.soundEffects?.join(', ') || ''}
+            value={Array.isArray(formData.content?.audio?.soundEffects) ? formData.content?.audio?.soundEffects.join(', ') : (formData.content?.audio?.soundEffects || '')}
             onChange={(e) =>
               setFormData({
                 ...formData,
