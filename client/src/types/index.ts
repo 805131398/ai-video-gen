@@ -196,6 +196,7 @@ export interface ElectronAPI {
   };
   resources: {
     download: (params: DownloadResourceParams) => Promise<DownloadResult>;
+    copyLocalFile: (sourcePath: string, params: DownloadResourceParams) => Promise<DownloadResult>;
     getStatus: (resourceType: string, resourceId: string) => Promise<ResourceDownloadStatus | null>;
     retry: (resourceType: string, resourceId: string) => Promise<DownloadResult>;
     readFileInfo: (filePath: string) => Promise<FileInfoResult>;
@@ -221,6 +222,7 @@ export interface ElectronAPI {
   chat: {
     sendMessage: (request: AiChatRequest) => Promise<string>;
     onStreamChunk: (callback: (chunk: AiChatStreamChunk) => void) => () => void;
+    generateImage: (request: AiImageGenerateRequest) => Promise<AiImageGenerateResult>;
   };
   // 视频生成
   video: {
@@ -233,7 +235,7 @@ export interface ElectronAPI {
 // 资源下载参数
 export interface DownloadResourceParams {
   url: string;
-  resourceType: 'character_avatar' | 'digital_human' | 'scene_video' | 'video_thumbnail' | 'chat_resource';
+  resourceType: 'character_avatar' | 'digital_human' | 'scene_video' | 'video_thumbnail' | 'chat_resource' | 'sora_video';
   resourceId: string;
   projectId?: string;
   characterId?: string;
@@ -554,6 +556,27 @@ export interface AiChatStreamChunk {
   type: 'delta' | 'done' | 'error';
   content?: string;
   error?: string;
+}
+
+// AI 图片生成请求参数
+export interface AiImageGenerateRequest {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  prompt: string;
+  n?: number;
+  size?: string;
+  conversationId?: string;
+  modelConfigId?: string;
+  toolType?: AiToolType;
+}
+
+// AI 图片生成响应
+export interface AiImageGenerateResult {
+  success: boolean;
+  images?: { url: string }[];
+  error?: string;
+  rawResponse?: any;
 }
 
 // 视频生成请求参数
